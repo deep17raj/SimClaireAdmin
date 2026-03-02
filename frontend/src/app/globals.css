@@ -1,0 +1,82 @@
+@import "tailwindcss";
+
+/* :root {
+  --background: #ffffff;
+  --foreground: #171717;
+} */
+
+@theme inline {
+  /* --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono); */
+  --color-brand: #f28628;
+  --color-secondary: #077770;
+  --color-tertary: #ffffff;
+  --color-bget: #f3f4f6;
+}
+
+/* @media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+} */
+
+body {
+  /* background: var(--background);
+  color: var(--foreground); */
+  font-family: sans-serif;
+}
+
+/* Base styles (Mobile First) */
+.heading {
+  font-size: 1.5rem; /* text-2xl (24px) */
+  font-weight: 700;  /* font-bold */
+  line-height: 2rem;
+}
+
+.subheading {   /* text-[#2d3240] */
+  font-size: 1.125rem; /* text-lg (18px) */
+  line-height: 1.75rem;
+}
+
+.desc {
+  font-size: 0.875rem; /* text-sm (14px) */
+  color: #6b7280;      /* text-gray-500 */
+  line-height: 1.25rem;
+}
+
+/* Medium Screens (md: prefix in Tailwind = min-width: 768px) */
+@media (min-width: 768px) {
+  .heading {
+    font-size: 2.25rem; /* text-4xl (36px) */
+    line-height: 2.5rem;
+  }
+
+  .subheading {
+    font-size: 1.25rem; /* text-xl (20px) */
+    line-height: 1.75rem;
+  }
+}
+
+.wht{
+  color: #ffffff;
+}
+.sec{
+  color: #077770;
+}
+
+/* 1. The Rule: Change color of .hv when parent (.group) is hovered */
+.group:hover .hv {
+  color: #0f172a; /* Hex code for slate-900 */
+}
+
+/* 2. Optional: Add smooth transition to the element itself */
+.hv {
+  transition: color 0.15s ease-in-out;
+}
+
+.hcol{
+  color: #1e2939;
+}
