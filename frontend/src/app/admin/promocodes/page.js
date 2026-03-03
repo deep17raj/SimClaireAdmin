@@ -91,7 +91,8 @@ export default function AdminPromoCodes() {
     if (!window.confirm("Are you sure you want to delete this promo code? This cannot be undone.")) return;
 
     try {
-      // await axios.delete(`${process.env.NEXT_PUBLIC_API_URL}/admin/delete/promocode/${id}`);
+      
+      await axios.delete(`${process.env.NEXT_PUBLIC_API_URL}/admin/promocode/${id}`);
       setPromoCodes(prev => prev.filter(code => code.id !== id));
     } catch (err) {
       console.error("Failed to delete", err);
