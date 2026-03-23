@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { 
   Edit2, Trash2, Power, PowerOff, Globe, 
-  AlertCircle, CheckCircle2, DollarSign, Percent, Search, Filter, 
-  Infinity
+  AlertCircle, CheckCircle2, Banknote, Percent, Search, Filter, 
+  Infinity,
 } from 'lucide-react';
 
 export default function TaxManagementCMS() {
@@ -151,7 +151,7 @@ export default function TaxManagementCMS() {
               onChange={(e) => setStatusFilter(e.target.value)}
               className="pl-9 pr-8 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand appearance-none cursor-pointer w-full sm:w-auto"
             >
-              <option value="all">All Statuses</option>
+              <option value="all">All Status</option>
               <option value="active">Active Only</option>
               <option value="inactive">Inactive Only</option>
             </select>
@@ -274,7 +274,7 @@ export default function TaxManagementCMS() {
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">Tax Rate (%)</label>
                 <div className="relative">
-                  <Percent size={16} className="absolute left-3 top-3 text-slate-400" />
+                  <Percent size={16} className="absolute left-3 top-4 text-slate-400" />
                   <input 
                     type="number" step="0.01" required
                     value={editingCountry.taxRate}
@@ -289,7 +289,7 @@ export default function TaxManagementCMS() {
                   Threshold Amount ({editingCountry.thresholdCurrency || 'Local Currency'})
                 </label>
                 <div className="relative">
-                  <DollarSign size={16} className="absolute left-3 top-3 text-slate-400" />
+                  <Banknote size={16} className="absolute left-3 top-4 text-slate-400" />
                   <input 
                     type="number" step="0.01"
                     value={editingCountry.threshold || ''}
