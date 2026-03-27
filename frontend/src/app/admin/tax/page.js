@@ -207,7 +207,7 @@ export default function TaxManagementCMS() {
                         <div className="flex justify-between items-center mt-1">
                           <span className="text-[10px] font-bold text-slate-400">
                             {country.percentageUsed >= 90 ? (
-                               <span className="text-red-500 flex items-center gap-1"><AlertCircle size={10} /> Approaching Limit</span>
+                               <span className="text-red-500 flex items-center gap-1"><AlertCircle size={10} /> Approaching Limit {country.percentageUsed}%</span>
                             ) : `${country.percentageUsed || 0}% Used`}
                           </span>
                         </div>
