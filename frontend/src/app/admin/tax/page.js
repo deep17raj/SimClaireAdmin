@@ -8,12 +8,15 @@ import {
   Infinity,
 } from 'lucide-react';
 
+// 🌟 Import your destination data
+import { allDestinations } from '@/data/destinationData';
+
 export default function TaxManagementCMS() {
   const [countries, setCountries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   
-  // 🌟 New Search and Filter State
+  // Search and Filter State
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'active', 'inactive'
 
@@ -75,7 +78,7 @@ export default function TaxManagementCMS() {
         return prevCountries.map((country) => {
           if (country.countryCode === payload.countryCode) {
             
-            // 🌟 Recalculate percentage locally so UI updates instantly without refresh
+            // Recalculate percentage locally so UI updates instantly without refresh
             const newThreshold = editingCountry.threshold ? Number(editingCountry.threshold) : null;
             const newPercentage = newThreshold ? Math.round((country.rollingTotal / newThreshold) * 100) : 0;
 
@@ -101,7 +104,7 @@ export default function TaxManagementCMS() {
     }
   };
 
-  // 🌟 Filter and Search Logic
+  // Filter and Search Logic
   const filteredCountries = countries.filter(country => {
     const matchesSearch = 
       country.countryName.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -115,7 +118,7 @@ export default function TaxManagementCMS() {
     return matchesSearch && matchesStatus;
   });
 
-  // 🌟 Premium Progress Bar Color Logic
+  // Premium Progress Bar Color Logic
   const getProgressBarColor = (percentage) => {
     if (percentage >= 90) return 'bg-red-500';
     if (percentage >= 75) return 'bg-orange-400';
@@ -172,83 +175,101 @@ export default function TaxManagementCMS() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm">
-              {filteredCountries.map((country) => (
-                <tr 
-                  key={country.countryCode} 
-                  className={`transition-all duration-200 ${country.active ? 'hover:bg-slate-50' : 'bg-slate-50 opacity-60 grayscale-[30%]'}`}
-                >
-                  <td className="p-4 font-medium text-slate-900 flex items-center gap-2">
-                    <Globe size={16} className={country.active ? "text-brand" : "text-slate-400"} />
-                    {country.countryName} ({country.countryCode})
-                    {country.isEu && <span className="ml-2 text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">EU</span>}
-                  </td>
-                  <td className="p-4 text-slate-600 font-medium">
-                    {country.taxRate}%
-                  </td>
-                  
-                  {/* 🌟 PREMIUM PROGRESS BAR COLUMN */}
-                  <td className="p-4">
-                    {country.threshold ? (
-                      <div className="flex flex-col w-full max-w-[240px]">
-                        <div className="flex justify-between items-end mb-1.5">
-                          <span className="font-bold text-slate-800 text-sm leading-none">
-                            {new Intl.NumberFormat().format(country.rollingTotal || 0)} <span className="text-slate-500 text-xs font-medium">{country.thresholdCurrency}</span>
-                          </span>
-                          <span className="text-slate-400 text-[10px] font-semibold uppercase tracking-wider leading-none">
-                             of {new Intl.NumberFormat().format(country.threshold)}
-                          </span>
-                        </div>
-                        <div className="w-full bg-slate-200/60 h-2 rounded-full overflow-hidden relative">
-                          <div 
-                            className={`absolute top-0 left-0 h-full rounded-full transition-all duration-1000 ease-out ${getProgressBarColor(country.percentageUsed || 0)}`}
-                            style={{ width: `${Math.min(country.percentageUsed || 0, 100)}%` }}
-                          />
-                        </div>
-                        <div className="flex justify-between items-center mt-1">
-                          <span className="text-[10px] font-bold text-slate-400">
-                            {country.percentageUsed >= 90 ? (
-                               <span className="text-red-500 flex items-center gap-1"><AlertCircle size={10} /> Approaching Limit {country.percentageUsed}%</span>
-                            ) : `${country.percentageUsed || 0}% Used`}
-                          </span>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2 text-slate-400">
-                        <Infinity size={18} className="text-brand" />
-                        <span className="italic text-xs font-medium">No Threshold Limit</span>
-                      </div>
-                    )}
-                  </td>
+              {filteredCountries.map((country) => {
+                
+                // 🌟 NEW: Find the matching region from the imported data
+                const matchedDest = allDestinations.find(
+                  (dest) => dest.isoCode === country.countryCode || dest.destinationID === country.countryCode
+                );
+                const regionName = matchedDest?.region || "Global";
 
-                  <td className="p-4">
-                    {country.requiresTaxFromFirstSale ? (
-                      <span className="inline-flex items-center gap-1 text-orange-600 bg-orange-50 px-2 py-1 rounded-md text-xs font-bold border border-orange-100">
-                        <AlertCircle size={12} /> Required
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md text-xs font-bold border border-emerald-100">
-                        <CheckCircle2 size={12} /> Exempt
-                      </span>
-                    )}
-                  </td>
-                  <td className="p-4 flex items-center justify-end gap-3">
-                    <button 
-                      onClick={() => handleToggle(country.countryCode, country.active)}
-                      className={`p-1.5 rounded-md transition-colors ${country.active ? 'text-red-500 hover:bg-red-50' : 'text-emerald-600 hover:bg-emerald-50'}`}
-                      title={country.active ? 'Disable Country' : 'Enable Country'}
-                    >
-                      {country.active ? <PowerOff size={18} /> : <Power size={18} />}
-                    </button>
-                    <button 
-                      onClick={() => { setEditingCountry(country); setIsEditModalOpen(true); }}
-                      className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-md transition-colors"
-                      title="Edit Rules"
-                    >
-                      <Edit2 size={18} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
+                return (
+                  <tr 
+                    key={country.countryCode} 
+                    className={`transition-all duration-200 ${country.active ? 'hover:bg-slate-50' : 'bg-slate-50 opacity-60 grayscale-[30%]'}`}
+                  >
+                    {/* 🌟 UPDATED: Display Name, Code, EU Badge, and Region */}
+                    <td className="p-4 font-medium text-slate-900 flex items-center gap-3">
+                      <div className="flex-shrink-0">
+                        <Globe size={18} className={country.active ? "text-brand" : "text-slate-400"} />
+                      </div>
+                      <div>
+                        <div className="flex items-center">
+                          <span className="font-bold">{country.countryName}</span> 
+                          <span className="text-slate-400 ml-1">({country.countryCode})</span>
+                          {country.isEu && <span className="ml-2 text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">EU</span>}
+                        </div>
+                        <span className="ml-2 text-[10px] bg-brand text-white px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">{regionName}</span>
+                      </div>
+                    </td>
+
+                    <td className="p-4 text-slate-600 font-medium">
+                      {country.taxRate}%
+                    </td>
+                    
+                    <td className="p-4">
+                      {country.threshold ? (
+                        <div className="flex flex-col w-full max-w-[240px]">
+                          <div className="flex justify-between items-end mb-1.5">
+                            <span className="font-bold text-slate-800 text-sm leading-none">
+                              {new Intl.NumberFormat().format(country.rollingTotal || 0)} <span className="text-slate-500 text-xs font-medium">{country.thresholdCurrency}</span>
+                            </span>
+                            <span className="text-slate-400 text-[10px] font-semibold uppercase tracking-wider leading-none">
+                               of {new Intl.NumberFormat().format(country.threshold)}
+                            </span>
+                          </div>
+                          <div className="w-full bg-slate-200/60 h-2 rounded-full overflow-hidden relative">
+                            <div 
+                              className={`absolute top-0 left-0 h-full rounded-full transition-all duration-1000 ease-out ${getProgressBarColor(country.percentageUsed || 0)}`}
+                              style={{ width: `${Math.min(country.percentageUsed || 0, 100)}%` }}
+                            />
+                          </div>
+                          <div className="flex justify-between items-center mt-1">
+                            <span className="text-[10px] font-bold text-slate-400">
+                              {country.percentageUsed >= 90 ? (
+                                 <span className="text-red-500 flex items-center gap-1"><AlertCircle size={10} /> Approaching Limit {country.percentageUsed}%</span>
+                              ) : `${country.percentageUsed || 0}% Used`}
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 text-slate-400">
+                          <Infinity size={18} className="text-brand" />
+                          <span className="italic text-xs font-medium">No Threshold Limit</span>
+                        </div>
+                      )}
+                    </td>
+
+                    <td className="p-4">
+                      {country.requiresTaxFromFirstSale ? (
+                        <span className="inline-flex items-center gap-1 text-orange-600 bg-orange-50 px-2 py-1 rounded-md text-xs font-bold border border-orange-100">
+                          <AlertCircle size={12} /> Required
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md text-xs font-bold border border-emerald-100">
+                          <CheckCircle2 size={12} /> Exempt
+                        </span>
+                      )}
+                    </td>
+                    <td className="p-4 flex items-center justify-end gap-3">
+                      <button 
+                        onClick={() => handleToggle(country.countryCode, country.active)}
+                        className={`p-1.5 rounded-md transition-colors ${country.active ? 'text-red-500 hover:bg-red-50' : 'text-emerald-600 hover:bg-emerald-50'}`}
+                        title={country.active ? 'Disable Country' : 'Enable Country'}
+                      >
+                        {country.active ? <PowerOff size={18} /> : <Power size={18} />}
+                      </button>
+                      <button 
+                        onClick={() => { setEditingCountry(country); setIsEditModalOpen(true); }}
+                        className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-md transition-colors"
+                        title="Edit Rules"
+                      >
+                        <Edit2 size={18} />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
               {filteredCountries.length === 0 && (
                 <tr>
                   <td colSpan="5" className="p-8 text-center text-slate-500">No countries match your search.</td>

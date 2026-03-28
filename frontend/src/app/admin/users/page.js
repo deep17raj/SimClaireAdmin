@@ -8,6 +8,9 @@ import {
   DollarSign, Tag, Smartphone, Database, Activity, User, FileCheck, Download
 } from "lucide-react";
 
+// 🌟 NEW: Import your destination data to map the country codes
+import { allDestinations } from "@/data/destinationData";
+
 // --- Helper for Date Formatting ---
 const formatDate = (isoString) => {
   if (!isoString) return "N/A";
@@ -73,6 +76,7 @@ export default function AdminUsersPanel() {
 
     try {
       const res = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/admin/get/userdata`, { email: emailInput.trim() });
+      console.log(res.data.data)
       if (res.data && res.data.data) {
         setUserSims(res.data.data);
       } else {
@@ -111,61 +115,47 @@ export default function AdminUsersPanel() {
     }
   };
 
-  // --- API 3 (Mock): Export CSV ---
+  // --- 🌟 API 3 (UPDATED): Real CSV Export Route ---
   const handleExportCSV = async () => {
     setIsExporting(true);
     
     try {
-      // 1. MOCK API CALL: Simulate backend generating a comprehensive report
-      // In reality, you will do: const res = await axios.post('/admin/export', { email: emailInput });
-      const mockResponseData = [
-        {
-          order_id: "ORD-849301",
-          email: emailInput,
-          country_code: "JP",
-          sim_type: "Data Only",
-          iccid: "8981030000000123456",
-          activation_code: "LPA:1$smdp.plus$XJ89-321-ASD",
-          base_price_usd: 4.50,
-          final_price_usd: 6.99,
-          payment_status: "SUCCEEDED",
-          provisioning_status: "ACTIVE",
-          purchase_date: "2026-03-25T14:32:00Z",
-          terms_agreed: true
-        },
-        {
-          order_id: "ORD-948502",
-          email: emailInput,
-          country_code: "FR",
-          sim_type: "Data + Voice",
-          iccid: "8981030000000987654",
-          activation_code: "LPA:1$smdp.plus$PL99-444-XYZ",
-          base_price_usd: 8.00,
-          final_price_usd: 12.50,
-          payment_status: "SUCCEEDED",
-          provisioning_status: "EXPIRED",
-          purchase_date: "2026-01-10T09:15:00Z",
-          terms_agreed: true
-        }
-      ];
+      // 1. Fetch real payload from backend
+      const res = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/admin/get/frontend-payload`, 
+        { email: emailInput.trim() },
+        { withCredentials: true }
+      );
+      
+      const payloadData = res.data?.data;
 
-      // Simulate network delay
-      await new Promise(resolve => setTimeout(resolve, 800));
-
-      // 2. Parse JSON to CSV format
-      if (!mockResponseData || mockResponseData.length === 0) {
+      if (!payloadData || payloadData.length === 0) {
         alert("No data available to export for this user.");
         return;
       }
 
-      // Get Headers dynamically from the first object
-      const headers = Object.keys(mockResponseData[0]);
+      // 2. Map destination codes to real country names
+      const formattedData = payloadData.map(row => {
+        // Find the matching destination in your local data array
+        const matchedDest = allDestinations.find(
+          (dest) => dest.destinationID === row.destination_country_code
+        );
+        
+        // If found, use the name; otherwise fallback to the raw code
+        const countryName = matchedDest ? matchedDest.destinationName : (row.destination_country_code || "Unknown");
+
+        return {
+          ...row,
+          destination_country_code: countryName // Overwrite the code with the readable name
+        };
+      });
+
+      // 3. Parse JSON to CSV format
+      const headers = Object.keys(formattedData[0]);
       
-      // Map data to CSV rows
-      const csvRows = mockResponseData.map(row => {
+      const csvRows = formattedData.map(row => {
         return headers.map(fieldName => {
           let cellData = row[fieldName] === null || row[fieldName] === undefined ? '' : row[fieldName];
-          // Escape quotes and wrap strings containing commas in quotes
+          // Escape quotes and wrap strings containing commas/newlines in quotes
           cellData = cellData.toString().replace(/"/g, '""');
           if (cellData.search(/("|,|\n)/g) >= 0) {
             cellData = `"${cellData}"`;
@@ -174,17 +164,16 @@ export default function AdminUsersPanel() {
         }).join(',');
       });
 
-      // Combine Headers and Rows
       const csvString = [headers.join(','), ...csvRows].join('\n');
 
-      // 3. Trigger Browser Download
+      // 4. Trigger Browser Download
       const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement("a");
       const url = URL.createObjectURL(blob);
       
-      const safeEmail = emailInput.split('@')[0]; // For a cleaner filename
+      const safeEmail = emailInput.split('@')[0]; // Cleaner filename
       link.setAttribute("href", url);
-      link.setAttribute("download", `Export_${safeEmail}_History.csv`);
+      link.setAttribute("download", `Export_${safeEmail}_Payload.csv`);
       link.style.visibility = 'hidden';
       document.body.appendChild(link);
       link.click();
@@ -192,7 +181,7 @@ export default function AdminUsersPanel() {
 
     } catch (err) {
       console.error("Export failed:", err);
-      alert("Failed to export data. Please try again.");
+      alert(err.response?.data?.message || "Failed to export data. Please try again.");
     } finally {
       setIsExporting(false);
     }
@@ -243,7 +232,7 @@ export default function AdminUsersPanel() {
         {hasSearched && !isSearching && !searchError && (
           <div className="space-y-6">
             
-            {/* 🌟 Result Header with Export Button */}
+            {/* Result Header with Export Button */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b pb-4 gap-4">
               <h2 className="text-xl font-bold text-gray-800">
                 Found {userSims.length} Orders for <span className="text-[#077770]">{emailInput}</span>
