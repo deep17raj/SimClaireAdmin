@@ -5,7 +5,7 @@ import axios from "axios";
 import { 
   Search, CreditCard, Globe, Calendar, Hash, 
   CheckCircle2, XCircle, Clock, X, QrCode, ShieldAlert, 
-  DollarSign, Tag, Smartphone, Database, Activity, User, FileCheck
+  DollarSign, Tag, Smartphone, Database, Activity, User, FileCheck, Download
 } from "lucide-react";
 
 // --- Helper for Date Formatting ---
@@ -58,6 +58,9 @@ export default function AdminUsersPanel() {
   const [isDetailsLoading, setIsDetailsLoading] = useState(false);
   const [detailsError, setDetailsError] = useState("");
 
+  // States for API 3 (CSV Export)
+  const [isExporting, setIsExporting] = useState(false);
+
   // --- API 1: Fetch all SIMs for a user ---
   const handleSearch = async (e) => {
     e.preventDefault();
@@ -70,7 +73,6 @@ export default function AdminUsersPanel() {
 
     try {
       const res = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/admin/get/userdata`, { email: emailInput.trim() });
-      console.log(res.data.data)
       if (res.data && res.data.data) {
         setUserSims(res.data.data);
       } else {
@@ -94,7 +96,6 @@ export default function AdminUsersPanel() {
       const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/admin/get/user/esimHistorybyId/${esim_history_id}`, {
         withCredentials: true
       });
-      console.log(res.data)
       
       if (res.data && res.data.data) {
         setSelectedSim(res.data.data);
@@ -107,6 +108,93 @@ export default function AdminUsersPanel() {
       setSelectedSim(null); 
     } finally {
       setIsDetailsLoading(false);
+    }
+  };
+
+  // --- API 3 (Mock): Export CSV ---
+  const handleExportCSV = async () => {
+    setIsExporting(true);
+    
+    try {
+      // 1. MOCK API CALL: Simulate backend generating a comprehensive report
+      // In reality, you will do: const res = await axios.post('/admin/export', { email: emailInput });
+      const mockResponseData = [
+        {
+          order_id: "ORD-849301",
+          email: emailInput,
+          country_code: "JP",
+          sim_type: "Data Only",
+          iccid: "8981030000000123456",
+          activation_code: "LPA:1$smdp.plus$XJ89-321-ASD",
+          base_price_usd: 4.50,
+          final_price_usd: 6.99,
+          payment_status: "SUCCEEDED",
+          provisioning_status: "ACTIVE",
+          purchase_date: "2026-03-25T14:32:00Z",
+          terms_agreed: true
+        },
+        {
+          order_id: "ORD-948502",
+          email: emailInput,
+          country_code: "FR",
+          sim_type: "Data + Voice",
+          iccid: "8981030000000987654",
+          activation_code: "LPA:1$smdp.plus$PL99-444-XYZ",
+          base_price_usd: 8.00,
+          final_price_usd: 12.50,
+          payment_status: "SUCCEEDED",
+          provisioning_status: "EXPIRED",
+          purchase_date: "2026-01-10T09:15:00Z",
+          terms_agreed: true
+        }
+      ];
+
+      // Simulate network delay
+      await new Promise(resolve => setTimeout(resolve, 800));
+
+      // 2. Parse JSON to CSV format
+      if (!mockResponseData || mockResponseData.length === 0) {
+        alert("No data available to export for this user.");
+        return;
+      }
+
+      // Get Headers dynamically from the first object
+      const headers = Object.keys(mockResponseData[0]);
+      
+      // Map data to CSV rows
+      const csvRows = mockResponseData.map(row => {
+        return headers.map(fieldName => {
+          let cellData = row[fieldName] === null || row[fieldName] === undefined ? '' : row[fieldName];
+          // Escape quotes and wrap strings containing commas in quotes
+          cellData = cellData.toString().replace(/"/g, '""');
+          if (cellData.search(/("|,|\n)/g) >= 0) {
+            cellData = `"${cellData}"`;
+          }
+          return cellData;
+        }).join(',');
+      });
+
+      // Combine Headers and Rows
+      const csvString = [headers.join(','), ...csvRows].join('\n');
+
+      // 3. Trigger Browser Download
+      const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+      
+      const safeEmail = emailInput.split('@')[0]; // For a cleaner filename
+      link.setAttribute("href", url);
+      link.setAttribute("download", `Export_${safeEmail}_History.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+    } catch (err) {
+      console.error("Export failed:", err);
+      alert("Failed to export data. Please try again.");
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -141,7 +229,7 @@ export default function AdminUsersPanel() {
             <button 
               type="submit" 
               disabled={isSearching}
-              className="px-8 py-3.5 bg-[#077770] text-white font-bold rounded-xl hover:bg-[#06605a] transition-colors disabled:opacity-70 flex items-center justify-center min-w-[140px] cursor-pointer"
+              className="px-8 py-3.5 bg-[#077770] text-white font-bold rounded-xl hover:bg-[#06605a] transition-colors disabled:opacity-70 flex items-center justify-center min-w-[140px] cursor-pointer shadow-sm"
             >
               {isSearching ? (
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -154,12 +242,31 @@ export default function AdminUsersPanel() {
         {/* Results List (API 1 Data) */}
         {hasSearched && !isSearching && !searchError && (
           <div className="space-y-6">
-            <h2 className="text-xl font-bold text-gray-800 border-b pb-2">
-              Found {userSims.length} Orders for <span className="text-[#077770]">{emailInput}</span>
-            </h2>
+            
+            {/* 🌟 Result Header with Export Button */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b pb-4 gap-4">
+              <h2 className="text-xl font-bold text-gray-800">
+                Found {userSims.length} Orders for <span className="text-[#077770]">{emailInput}</span>
+              </h2>
+              
+              {userSims.length > 0 && (
+                <button 
+                  onClick={handleExportCSV}
+                  disabled={isExporting}
+                  className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 font-bold text-sm rounded-lg hover:bg-slate-200 transition-colors disabled:opacity-50 cursor-pointer border border-slate-300"
+                >
+                  {isExporting ? (
+                    <div className="w-4 h-4 border-2 border-slate-500 border-t-transparent rounded-full animate-spin"></div>
+                  ) : (
+                    <Download size={16} />
+                  )}
+                  {isExporting ? "Generating..." : "Export as CSV"}
+                </button>
+              )}
+            </div>
 
             {userSims.length === 0 ? (
-              <div className="bg-white p-10 rounded-2xl border border-gray-200 text-center">
+              <div className="bg-white p-10 rounded-2xl border border-gray-200 text-center shadow-sm">
                 <p className="text-gray-500 font-medium">This user hasn't purchased any eSIMs yet.</p>
               </div>
             ) : (
@@ -202,8 +309,7 @@ export default function AdminUsersPanel() {
                           <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
                             <Database size={14}/> Technical Details
                           </h4>
-                          {/* 🌟 New Agreed to Terms tag in outer card */}
-                          <span className={`text-[14px] font-bold px-4 py-1 rounded-full ${sim.terms_agreed === 1 ? 'bg-blue-50 text-blue-600' : 'bg-gray-100 text-gray-500'}`}>
+                          <span className={`text-[10px] uppercase tracking-wider font-extrabold px-3 py-1 rounded-full ${sim.terms_agreed === 1 ? 'bg-blue-50 text-blue-600 border border-blue-200' : 'bg-gray-100 text-gray-500 border border-gray-200'}`}>
                             Terms agreed: {sim.terms_agreed === 1 ? "Yes" : "No"}
                           </span>
                         </div>
@@ -219,9 +325,8 @@ export default function AdminUsersPanel() {
                           </div>
                           <div className="sm:col-span-2">
                             <p className="text-xs text-gray-500 mb-1">ICCID</p>
-                            {/* 🌟 Updated ICCID Fallback Logic */}
-                            <p className="font-mono text-sm font-semibold text-gray-900 bg-gray-100 px-2 py-1 rounded inline-block break-all">
-                              {sim.iccid ? sim.iccid : "N/A"}
+                            <p className="font-mono text-sm font-semibold text-gray-900 bg-gray-100 px-2 py-1 rounded inline-block break-all border border-gray-200">
+                              {sim.iccid ? sim.iccid : "Pending Initialization..."}
                             </p>
                           </div>
                           {sim.msisdn && (
@@ -239,7 +344,7 @@ export default function AdminUsersPanel() {
                           <DollarSign size={14}/> Financial Breakdown
                         </h4>
 
-                        <div className="bg-gray-50 rounded-xl p-4 space-y-3">
+                        <div className="bg-gray-50 rounded-xl p-4 space-y-3 border border-gray-100">
                           {/* 1. API Base Price */}
                           <div className="flex justify-between items-center border-b border-gray-200 pb-2">
                             <span className="text-sm text-gray-600 font-medium flex items-center gap-1.5">
@@ -254,15 +359,15 @@ export default function AdminUsersPanel() {
                           <div className="flex justify-between items-center border-b border-gray-200 pb-2">
                             <div className="flex flex-col">
                               <span className="text-sm text-gray-800 font-bold flex items-center gap-1.5">
-                                <Tag size={14} className="text-brand"/> Billed to User
+                                <Tag size={14} className="text-[#077770]"/> Billed to User
                               </span>
                               {(sim.discount_value > 0 || sim.promo_code) && (
-                                <span className="text-[10px] text-brand font-medium mt-0.5">
+                                <span className="text-[10px] text-[#077770] font-medium mt-0.5">
                                   Discount: -{sim.currency} {sim.discount_value} {sim.promo_code && `(${sim.promo_code})`}
                                 </span>
                               )}
                             </div>
-                            <span className="font-mono font-bold text-lg text-brand">
+                            <span className="font-mono font-bold text-lg text-[#077770]">
                               {sim.currency} {sim.final_price}
                             </span>
                           </div>
@@ -272,7 +377,7 @@ export default function AdminUsersPanel() {
                             <span className="text-sm text-gray-600 font-medium flex items-center gap-1.5">
                               <CreditCard size={14} className="text-green-600"/> Actual Amount Paid
                             </span>
-                            <span className="font-mono font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded">
+                            <span className="font-mono font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded border border-green-200">
                               {sim.payment_currency} {sim.payment_amount}
                             </span>
                           </div>
@@ -289,19 +394,19 @@ export default function AdminUsersPanel() {
 
         {/* Detailed Modal (API 2 Data) */}
         {selectedSim && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col animate-in zoom-in-95 duration-200">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col animate-in zoom-in-95 duration-200 overflow-hidden">
               
               {/* Modal Header */}
-              <div className="flex justify-between items-center p-6 border-b border-gray-100 bg-gray-50/50 rounded-t-3xl">
+              <div className="flex justify-between items-center p-6 border-b border-gray-100 bg-gray-50/80">
                 <div>
-                  <h3 className="text-2xl font-bold text-gray-900">Deep eSIM Record</h3>
+                  <h3 className="text-2xl font-extrabold text-gray-900 tracking-tight">Deep eSIM Record</h3>
                   <p className="text-sm text-gray-500 mt-1 font-medium flex items-center gap-2">
-                    History ID: #{selectedSim.esim_history_id || "Loading..."} | User ID: #{selectedSim.user_id}
+                    History ID: <span className="font-mono bg-gray-200 px-1.5 py-0.5 rounded text-gray-700">#{selectedSim.esim_history_id || "Loading..."}</span> | User ID: <span className="font-mono bg-gray-200 px-1.5 py-0.5 rounded text-gray-700">#{selectedSim.user_id}</span>
                   </p>
                 </div>
-                <button onClick={closeModal} className="p-2 text-gray-400 hover:text-gray-900 hover:bg-gray-200 rounded-full transition-colors cursor-pointer">
-                  <X size={24} />
+                <button onClick={closeModal} className="p-2.5 text-gray-400 hover:text-gray-900 hover:bg-white border border-transparent hover:border-gray-200 shadow-sm rounded-full transition-all cursor-pointer">
+                  <X size={20} />
                 </button>
               </div>
 
@@ -313,61 +418,61 @@ export default function AdminUsersPanel() {
                     <p className="font-bold">Fetching deep telecom & stripe records...</p>
                   </div>
                 ) : detailsError ? (
-                  <div className="py-10 text-center text-red-500 font-bold">{detailsError}</div>
+                  <div className="py-10 text-center text-red-500 font-bold bg-red-50 rounded-xl border border-red-100">{detailsError}</div>
                 ) : (
                   <div className="space-y-8">
                     
                     {/* Section 1: Network & Activation */}
                     <div>
-                      <h4 className="flex items-center gap-2 text-sm font-bold text-[#077770] uppercase tracking-wider mb-4 border-b pb-2">
+                      <h4 className="flex items-center gap-2 text-sm font-extrabold text-[#077770] uppercase tracking-widest mb-4 border-b pb-2">
                         <QrCode size={16} /> Network Details
                       </h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="bg-gray-50 p-4 rounded-xl">
-                          <p className="text-xs text-gray-500 mb-1">ICCID</p>
+                        <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                          <p className="text-[10px] uppercase font-extrabold text-gray-400 mb-1">ICCID</p>
                           <p className="font-mono font-bold text-gray-900 break-all">{selectedSim.iccid ? selectedSim.iccid : "N/A"}</p>
                         </div>
-                        <div className="bg-gray-50 p-4 rounded-xl">
-                          <p className="text-xs text-gray-500 mb-1">Activation Code (LPA)</p>
-                          <p className="font-mono text-sm font-semibold text-gray-900 break-all">{selectedSim.activation_code || "N/A"}</p>
+                        <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                          <p className="text-[10px] uppercase font-extrabold text-gray-400 mb-1">Activation Code (LPA)</p>
+                          <p className="font-mono text-sm font-bold text-gray-900 break-all">{selectedSim.activation_code || "N/A"}</p>
                         </div>
                         
                         <div className="md:col-span-2 grid grid-cols-2 sm:grid-cols-3 gap-4 bg-gray-50 p-4 rounded-xl border border-gray-100">
                           <div>
-                            <p className="text-xs text-gray-500">SKU</p>
+                            <p className="text-[10px] uppercase font-extrabold text-gray-400">SKU</p>
                             <p className="font-bold text-gray-900">{selectedSim.sku}</p>
                           </div>
                           <div>
-                            <p className="text-xs text-gray-500">Product Type</p>
+                            <p className="text-[10px] uppercase font-extrabold text-gray-400">Product Type</p>
                             <p className="font-bold text-gray-900">{selectedSim.product_type}</p>
                           </div>
                           <div>
-                            <p className="text-xs text-gray-500">Quantity</p>
+                            <p className="text-[10px] uppercase font-extrabold text-gray-400">Quantity</p>
                             <p className="font-bold text-gray-900">{selectedSim.quantity}</p>
                           </div>
                         </div>
 
-                        {/* 🌟 Fixed Provider Overlap: Changed grid-cols to 2 instead of 4 */}
-                        <div className="md:col-span-2 bg-[#077770]/5 p-4 rounded-xl border border-[#077770]/10">
-                           <p className="text-xs font-bold text-[#077770] uppercase tracking-wider mb-3 flex items-center gap-1.5"><Activity size={14}/> Provider Logs</p>
-                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="md:col-span-2 bg-[#077770]/5 p-5 rounded-xl border border-[#077770]/10">
+                           <p className="text-[10px] font-extrabold text-[#077770] uppercase tracking-widest mb-4 flex items-center gap-1.5"><Activity size={14}/> Provider Logs</p>
+                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                              <div>
-                                <p className="text-[10px] text-gray-500">Provider Purchase ID</p>
-                                <p className="font-mono text-sm font-bold text-gray-800 break-all">{selectedSim.provider_purchase_id || "N/A"}</p>
+                                <p className="text-[10px] uppercase font-extrabold text-gray-400 mb-0.5">Provider Purchase ID</p>
+                                <p className="font-mono text-sm font-bold text-gray-800 break-all bg-white p-2 rounded-lg border border-[#077770]/10">{selectedSim.provider_purchase_id || "N/A"}</p>
                              </div>
                              <div>
-                                <p className="text-[10px] text-gray-500">Provider Ref</p>
-                                <p className="font-mono text-sm font-bold text-gray-800 break-all">{selectedSim.provider_reference || "N/A"}</p>
+                                <p className="text-[10px] uppercase font-extrabold text-gray-400 mb-0.5">Provider Ref</p>
+                                <p className="font-mono text-sm font-bold text-gray-800 break-all bg-white p-2 rounded-lg border border-[#077770]/10">{selectedSim.provider_reference || "N/A"}</p>
                              </div>
                              <div>
-                                <p className="text-[10px] text-gray-500">Status Code/Msg</p>
+                                <p className="text-[10px] uppercase font-extrabold text-gray-400 mb-0.5">Status Code/Msg</p>
                                 <p className="font-mono text-sm font-bold text-gray-800">
-                                  {selectedSim.provider_status_code || "N/A"} {selectedSim.provider_status_msg && `(${selectedSim.provider_status_msg})`}
+                                  <span className="bg-white px-2 py-1 rounded border border-[#077770]/10">{selectedSim.provider_status_code || "N/A"}</span> 
+                                  <span className="ml-2 text-gray-500">{selectedSim.provider_status_msg && `(${selectedSim.provider_status_msg})`}</span>
                                 </p>
                              </div>
                              <div>
-                                <p className="text-[10px] text-gray-500">TXN Time</p>
-                                <p className="font-mono text-sm font-bold text-gray-800">{selectedSim.provider_txn_time || "N/A"}</p>
+                                <p className="text-[10px] uppercase font-extrabold text-gray-400 mb-0.5">TXN Time</p>
+                                <p className="font-mono text-sm font-bold text-gray-800 bg-white p-2 rounded-lg border border-[#077770]/10 inline-block">{selectedSim.provider_txn_time || "N/A"}</p>
                              </div>
                            </div>
                         </div>
@@ -376,39 +481,38 @@ export default function AdminUsersPanel() {
 
                     {/* Section 2: Stripe & Financials */}
                     <div>
-                      <h4 className="flex items-center gap-2 text-sm font-bold text-purple-600 uppercase tracking-wider mb-4 border-b pb-2">
+                      <h4 className="flex items-center gap-2 text-sm font-extrabold text-purple-600 uppercase tracking-widest mb-4 border-b pb-2">
                         <CreditCard size={16} /> Status & Gateway Records
                       </h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         
-                        {/* 🌟 Updated Status Layout */}
-                        <div className="flex flex-col gap-4 bg-gray-50 p-4 rounded-xl border border-gray-100">
+                        <div className="flex flex-col gap-4 bg-gray-50 p-5 rounded-xl border border-gray-100">
                           <div className="flex justify-between items-center">
-                            <span className="text-sm font-semibold text-gray-700">Order Status</span>
+                            <span className="text-[11px] uppercase font-extrabold text-gray-500">Order Status</span>
                             <StatusBadge status={selectedSim.order_status} />
                           </div>
                           <div className="flex justify-between items-center">
-                            <span className="text-sm font-semibold text-gray-700">Payment Status</span>
+                            <span className="text-[11px] uppercase font-extrabold text-gray-500">Payment Status</span>
                             <StatusBadge status={selectedSim.payment_status} />
                           </div>
                           <div className="flex justify-between items-center">
-                            <span className="text-sm font-semibold text-gray-700">Provisioning Status</span>
+                            <span className="text-[11px] uppercase font-extrabold text-gray-500">Provisioning Status</span>
                             <StatusBadge status={selectedSim.provisioning_status} />
                           </div>
-                          <div className="flex justify-between items-center pt-2 border-t border-gray-200">
-                            <span className="text-sm font-bold text-gray-900">Total Charged</span>
-                            <span className="font-bold text-lg text-green-600">{userSims.find(s => s.esim_history_id === selectedSim.esim_history_id)?.payment_currency} {selectedSim.payment_amount}</span>
+                          <div className="flex justify-between items-center pt-3 border-t border-gray-200 mt-1">
+                            <span className="text-sm font-extrabold text-gray-900">Total Charged</span>
+                            <span className="font-extrabold text-xl text-green-600 bg-green-100 px-3 py-1 rounded-lg border border-green-200">{userSims.find(s => s.esim_history_id === selectedSim.esim_history_id)?.payment_currency} {selectedSim.payment_amount}</span>
                           </div>
                         </div>
 
-                        <div className="flex flex-col justify-center gap-4 bg-gray-50 p-4 rounded-xl border border-gray-100 overflow-hidden">
+                        <div className="flex flex-col justify-center gap-5 bg-gray-50 p-5 rounded-xl border border-gray-100">
                           <div>
-                            <span className="text-xs text-gray-500 font-bold block mb-1">Stripe Payment Intent ID</span>
-                            <span className="font-mono text-sm text-gray-800 bg-gray-200 px-3 py-1.5 rounded block truncate">{selectedSim.stripe_payment_intent_id || "N/A"}</span>
+                            <span className="text-[10px] uppercase font-extrabold text-gray-400 block mb-1">Stripe Payment Intent ID</span>
+                            <span className="font-mono text-sm font-bold text-gray-800 bg-white border border-gray-200 px-3 py-2 rounded-lg block truncate">{selectedSim.stripe_payment_intent_id || "N/A"}</span>
                           </div>
                           <div>
-                            <span className="text-xs text-gray-500 font-bold block mb-1">Stripe Session ID</span>
-                            <span className="font-mono text-sm text-gray-800 bg-gray-200 px-3 py-1.5 rounded block truncate">{selectedSim.stripe_sessionId || "N/A"}</span>
+                            <span className="text-[10px] uppercase font-extrabold text-gray-400 block mb-1">Stripe Session ID</span>
+                            <span className="font-mono text-sm font-bold text-gray-800 bg-white border border-gray-200 px-3 py-2 rounded-lg block truncate">{selectedSim.stripe_sessionId || "N/A"}</span>
                           </div>
                         </div>
                       </div>
@@ -416,24 +520,23 @@ export default function AdminUsersPanel() {
 
                     {/* Section 3: User Details & eKYC (Shows if data exists) */}
                     <div>
-                      <h4 className="flex items-center gap-2 text-sm font-bold text-slate-800 uppercase tracking-wider mb-4 border-b pb-2">
+                      <h4 className="flex items-center gap-2 text-sm font-extrabold text-slate-800 uppercase tracking-widest mb-4 border-b pb-2">
                         <User size={16} /> Customer Information
                       </h4>
                       
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-                        <div className="bg-gray-50 p-3 rounded-xl flex items-center gap-3 sm:col-span-2">
-                           <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center"><User size={14} className="text-slate-500"/></div>
+                        <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 flex items-center gap-3 sm:col-span-2">
+                           <div className="w-10 h-10 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center"><User size={18} className="text-slate-400"/></div>
                            <div>
-                             <p className="text-xs text-gray-500">Email Address</p>
-                             <p className="font-semibold text-gray-900">{selectedSim.email || "N/A"}</p>
+                             <p className="text-[10px] uppercase font-extrabold text-gray-400">Email Address</p>
+                             <p className="font-bold text-gray-900">{selectedSim.email || "N/A"}</p>
                            </div>
                         </div>
-                        <div className="bg-gray-50 p-3 rounded-xl flex items-center gap-3">
-                           <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center"><FileCheck size={14} className="text-slate-500"/></div>
+                        <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 flex items-center gap-3">
+                           <div className="w-10 h-10 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center"><FileCheck size={18} className="text-slate-400"/></div>
                            <div>
-                             <p className="text-xs text-gray-500">Terms Agreed?</p>
-                             {/* 🌟 New terms agreed mapping based on API 1 data */}
-                             <p className={`font-bold ${userSims.find(s => s.esim_history_id === selectedSim.esim_history_id)?.terms_agreed === 1 ? "text-green-600" : "text-gray-500"}`}>
+                             <p className="text-[10px] uppercase font-extrabold text-gray-400">Terms Agreed?</p>
+                             <p className={`font-extrabold ${userSims.find(s => s.esim_history_id === selectedSim.esim_history_id)?.terms_agreed === 1 ? "text-green-600" : "text-gray-400"}`}>
                                {userSims.find(s => s.esim_history_id === selectedSim.esim_history_id)?.terms_agreed === 1 ? "Yes" : "No"}
                              </p>
                            </div>
@@ -441,27 +544,31 @@ export default function AdminUsersPanel() {
                       </div>
 
                       {(selectedSim.customer_name || selectedSim.customer_document_number) && (
-                        <div className="bg-orange-50/50 rounded-xl p-4 border border-orange-100 grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
-                          <div className="col-span-2 sm:col-span-4 mb-2">
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-bold bg-orange-100 text-orange-700 uppercase tracking-wider">
-                              <ShieldAlert size={12}/> eKYC Verification Data
+                        <div className="bg-orange-50/50 rounded-xl p-5 border border-orange-100 grid grid-cols-2 sm:grid-cols-4 gap-5 mt-4 relative overflow-hidden">
+                          <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
+                            <ShieldAlert size={100} />
+                          </div>
+                          
+                          <div className="col-span-2 sm:col-span-4 mb-1">
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-extrabold bg-orange-100 text-orange-700 uppercase tracking-wider border border-orange-200">
+                              <ShieldAlert size={14}/> eKYC Verification Data
                             </span>
                           </div>
-                          <div>
-                            <p className="text-xs text-gray-500">Full Name</p>
-                            <p className="font-semibold text-gray-900">{selectedSim.customer_name} {selectedSim.customer_surname1}</p>
+                          <div className="relative z-10">
+                            <p className="text-[10px] uppercase font-extrabold text-orange-500/70 mb-1">Full Name</p>
+                            <p className="font-bold text-gray-900">{selectedSim.customer_name} {selectedSim.customer_surname1}</p>
                           </div>
-                          <div>
-                            <p className="text-xs text-gray-500">Document Number</p>
-                            <p className="font-mono font-semibold text-gray-900">{selectedSim.customer_document_number}</p>
+                          <div className="relative z-10">
+                            <p className="text-[10px] uppercase font-extrabold text-orange-500/70 mb-1">Document Number</p>
+                            <p className="font-mono font-bold text-gray-900 bg-white px-2 py-1 rounded inline-block shadow-sm">{selectedSim.customer_document_number}</p>
                           </div>
-                          <div>
-                            <p className="text-xs text-gray-500">Birthdate</p>
-                            <p className="font-semibold text-gray-900">{selectedSim.customer_birthdate}</p>
+                          <div className="relative z-10">
+                            <p className="text-[10px] uppercase font-extrabold text-orange-500/70 mb-1">Birthdate</p>
+                            <p className="font-bold text-gray-900">{selectedSim.customer_birthdate}</p>
                           </div>
-                          <div>
-                            <p className="text-xs text-gray-500">Gender / Nat. ID</p>
-                            <p className="font-semibold text-gray-900">{selectedSim.customer_sex} / {selectedSim.customer_nationality_id}</p>
+                          <div className="relative z-10">
+                            <p className="text-[10px] uppercase font-extrabold text-orange-500/70 mb-1">Gender / Nat. ID</p>
+                            <p className="font-bold text-gray-900">{selectedSim.customer_sex} / {selectedSim.customer_nationality_id}</p>
                           </div>
                         </div>
                       )}
