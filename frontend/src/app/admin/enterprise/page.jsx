@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { 
-  Building2, Search, Filter, Calendar, Mail, 
+import {
+  Building2, Search, Filter, Calendar, Mail,
   CheckCircle2, Archive, Eye, X, Briefcase, Globe2, AlertCircle
 } from "lucide-react";
 
@@ -18,6 +18,26 @@ const formatDate = (dateString) => {
 };
 
 export default function EnterpriseAdminCMS() {
+  // Put this logic right above your button in the component
+              const emailSubject = encodeURIComponent("Your SiM Claire IoT Inquiry");
+              const emailBody = encodeURIComponent(`Greetings!
+
+              Thank you for reaching out to SiM Claire. We have received your requirements and are currently reviewing your project details.
+
+              In the world of IoT and M2M, we know that uptime and security are critical. Our team is evaluating the best Multi-IMSI profiles and eUICC configurations to ensure your fleet units remain connected across the world with zero downtime.
+
+              What’s Next?
+              An enterprise specialist will contact you within 24-48 business hours to discuss a tailored pilot program and technical specifications (Private APN/VPN).
+
+              If you have urgent updates, feel free to reply here or reach us via WhatsApp at +1-437-605-6560.
+
+              Best regards,
+              The SiM Claire Enterprise Team
+              simclaire.com/enterprise
+              Care@simclaire.com
+              +1 (437) 605-6560`);
+
+              // Your updated button:
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -27,7 +47,7 @@ export default function EnterpriseAdminCMS() {
   const [timeFilter, setTimeFilter] = useState("all"); // 'all', 'thisMonth', 'last30days', 'custom'
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
-  
+
   // Client-side Search (for quickly finding a specific name/company in the fetched list)
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -39,11 +59,11 @@ export default function EnterpriseAdminCMS() {
   const fetchLeads = async () => {
     setLoading(true);
     setError("");
-    
+
     try {
       // Build the query string based on selected filters
       let query = `?status=${statusFilter}`;
-      
+
       if (timeFilter !== "all" && timeFilter !== "custom") {
         query += `&time_segment=${timeFilter}`;
       } else if (timeFilter === "custom" && fromDate && toDate) {
@@ -53,7 +73,7 @@ export default function EnterpriseAdminCMS() {
       const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/b2b/leads${query}`, {
         withCredentials: true
       });
-      
+
       // Assume data is nested in standard REST format (e.g., res.data.data)
       setLeads(res.data.data || res.data || []);
     } catch (err) {
@@ -68,26 +88,26 @@ export default function EnterpriseAdminCMS() {
   useEffect(() => {
     // Only fetch for 'custom' if both dates are selected, otherwise wait
     if (timeFilter === "custom" && (!fromDate || !toDate)) return;
-    
+
     fetchLeads();
   }, [statusFilter, timeFilter, fromDate, toDate]);
 
   // 🌟 PATCH Request to Toggle Lead Status
   const handleToggleStatus = async (id, currentStatus) => {
     if (!window.confirm(`Are you sure you want to mark this lead as ${currentStatus ? 'Inactive/Archived' : 'Active'}?`)) return;
-    
+
     setIsUpdating(true);
     try {
-      await axios.patch(`${process.env.NEXT_PUBLIC_API_URL}/b2b/leads/${id}`, 
-        { is_active: !currentStatus }, 
+      await axios.patch(`${process.env.NEXT_PUBLIC_API_URL}/b2b/leads/${id}`,
+        { is_active: !currentStatus },
         { withCredentials: true }
       );
-      
+
       // Update local state instantly without full refresh
-      setLeads(prevLeads => prevLeads.map(lead => 
+      setLeads(prevLeads => prevLeads.map(lead =>
         lead.id === id ? { ...lead, is_active: !currentStatus } : lead
       ));
-      
+
       // If modal is open for this lead, update it too
       if (selectedLead && selectedLead.id === id) {
         setSelectedLead({ ...selectedLead, is_active: !currentStatus });
@@ -111,7 +131,7 @@ export default function EnterpriseAdminCMS() {
 
   return (
     <div className="p-6 lg:p-10 max-w-7xl mx-auto font-sans pb-24">
-      
+
       {/* Header & Description */}
       <div className="mb-8">
         <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Enterprise Leads</h1>
@@ -120,13 +140,13 @@ export default function EnterpriseAdminCMS() {
 
       {/* 🌟 FILTER CONTROL BAR */}
       <div className="bg-white rounded-[1.5rem] p-5 shadow-sm border border-slate-200 mb-8 flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
-        
+
         {/* Search */}
         <div className="relative w-full lg:w-72 shrink-0">
           <Search size={18} className="absolute left-4 top-3 text-slate-400" />
-          <input 
-            type="text" 
-            placeholder="Search name, company, email..." 
+          <input
+            type="text"
+            placeholder="Search name, company, email..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-11 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all"
@@ -135,10 +155,10 @@ export default function EnterpriseAdminCMS() {
 
         {/* Backend Filters */}
         <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
-          
+
           <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-2 py-1 gap-1">
             <Filter size={14} className="text-slate-400 ml-2" />
-            <select 
+            <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               className="bg-transparent text-sm font-bold text-slate-700 py-1.5 px-2 outline-none cursor-pointer appearance-none"
@@ -151,7 +171,7 @@ export default function EnterpriseAdminCMS() {
 
           <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-2 py-1 gap-1">
             <Calendar size={14} className="text-slate-400 ml-2" />
-            <select 
+            <select
               value={timeFilter}
               onChange={(e) => {
                 setTimeFilter(e.target.value);
@@ -171,15 +191,15 @@ export default function EnterpriseAdminCMS() {
           {/* Custom Date Pickers show only if timeFilter is 'custom' */}
           {timeFilter === "custom" && (
             <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-4 duration-300">
-              <input 
-                type="date" 
+              <input
+                type="date"
                 value={fromDate}
                 onChange={(e) => setFromDate(e.target.value)}
                 className="bg-slate-50 border border-slate-200 text-sm font-medium rounded-xl px-3 py-2 outline-none focus:border-brand"
               />
               <span className="text-slate-400 text-sm font-bold">to</span>
-              <input 
-                type="date" 
+              <input
+                type="date"
                 value={toDate}
                 onChange={(e) => setToDate(e.target.value)}
                 className="bg-slate-50 border border-slate-200 text-sm font-medium rounded-xl px-3 py-2 outline-none focus:border-brand"
@@ -192,11 +212,11 @@ export default function EnterpriseAdminCMS() {
 
       {/* 🌟 DATA TABLE */}
       <div className="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden">
-        
+
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20">
-             <div className="w-10 h-10 border-4 border-brand border-t-transparent rounded-full animate-spin mb-4"></div>
-             <p className="text-slate-500 font-bold">Fetching leads...</p>
+            <div className="w-10 h-10 border-4 border-brand border-t-transparent rounded-full animate-spin mb-4"></div>
+            <p className="text-slate-500 font-bold">Fetching leads...</p>
           </div>
         ) : error ? (
           <div className="p-10 text-center text-red-500 font-bold bg-red-50 m-6 rounded-2xl border border-red-100">{error}</div>
@@ -226,8 +246,8 @@ export default function EnterpriseAdminCMS() {
                   </tr>
                 ) : (
                   filteredLeads.map((lead) => (
-                    <tr 
-                      key={lead.id} 
+                    <tr
+                      key={lead.id}
                       className={`transition-all duration-200 hover:bg-slate-50 group ${!lead.is_active ? 'opacity-60 bg-slate-50/50' : ''}`}
                     >
                       {/* Contact Info */}
@@ -283,8 +303,8 @@ export default function EnterpriseAdminCMS() {
                       {/* Actions */}
                       <td className="p-5 pr-6 text-right">
                         <div className="flex items-center justify-end gap-2  md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                          
-                          <button 
+
+                          <button
                             onClick={() => setSelectedLead(lead)}
                             className="p-2 bg-white border border-slate-200 text-slate-600 hover:text-brand hover:border-brand rounded-xl transition-all shadow-sm tooltip-trigger cursor-pointer"
                             title="View Requirements"
@@ -292,7 +312,7 @@ export default function EnterpriseAdminCMS() {
                             <Eye size={18} />
                           </button>
 
-                          <button 
+                          <button
                             onClick={() => handleToggleStatus(lead.id, lead.is_active)}
                             disabled={isUpdating}
                             className={`p-2 bg-white border border-slate-200 rounded-xl transition-all shadow-sm cursor-pointer disabled:opacity-50 ${lead.is_active ? 'text-red-500 hover:bg-red-50 hover:border-red-200' : 'text-emerald-600 hover:bg-emerald-50 hover:border-emerald-200'}`}
@@ -316,7 +336,7 @@ export default function EnterpriseAdminCMS() {
       {selectedLead && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white rounded-[2rem] w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl animate-in zoom-in-95 duration-200 flex flex-col">
-            
+
             {/* Modal Header */}
             <div className="sticky top-0 z-10 bg-white border-b border-slate-100 p-6 flex justify-between items-center">
               <div className="flex items-center gap-4">
@@ -338,7 +358,7 @@ export default function EnterpriseAdminCMS() {
                 ) : (
                   <span className="text-slate-500 bg-slate-200 px-3 py-1 rounded-full text-xs font-bold border border-slate-300">Archived</span>
                 )}
-                <button 
+                <button
                   onClick={() => setSelectedLead(null)}
                   className="p-2 text-slate-400 hover:text-slate-900 bg-slate-50 hover:bg-slate-200 rounded-full transition-colors cursor-pointer"
                 >
@@ -349,7 +369,7 @@ export default function EnterpriseAdminCMS() {
 
             {/* Modal Body */}
             <div className="p-6 md:p-8 space-y-8 bg-slate-50/50">
-              
+
               {/* Quick Meta Grid */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
@@ -400,18 +420,19 @@ export default function EnterpriseAdminCMS() {
 
             {/* Modal Footer */}
             <div className="sticky bottom-0 bg-white border-t border-slate-100 p-6 flex justify-end gap-3 rounded-b-[2rem]">
-              <button 
+              <button
                 onClick={() => handleToggleStatus(selectedLead.id, selectedLead.is_active)}
                 className={`px-6 py-3 rounded-xl font-bold transition-all border cursor-pointer flex items-center gap-2 ${selectedLead.is_active ? 'bg-red-50 text-red-600 border-red-100 hover:bg-red-100' : 'bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100'}`}
               >
                 {selectedLead.is_active ? <Archive size={18} /> : <CheckCircle2 size={18} />}
                 {selectedLead.is_active ? "Archive Lead" : "Restore Lead"}
               </button>
-              <a 
-                href={`mailto:${selectedLead.email}?subject=Re: Enterprise eSIM Inquiry - SiM Claire`}
+              
+              <a
+                href={`mailto:${selectedLead?.email}?subject=${emailSubject}&body=${emailBody}`}
                 className="bg-slate-900 text-white px-8 py-3 rounded-xl font-bold hover:bg-black transition-all flex items-center gap-2 shadow-md cursor-pointer"
               >
-                <Mail size={18} /> Reply via Email
+                Reply via Email
               </a>
             </div>
 
