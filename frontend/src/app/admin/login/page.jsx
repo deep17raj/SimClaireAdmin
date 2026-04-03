@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import axios from "axios";
 import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
 import { ShieldAlert, Activity } from "lucide-react";
+import Image from "next/image";
 
 export default function AdminLogin() {
   const router = useRouter();
@@ -48,8 +49,12 @@ export default function AdminLogin() {
         
         <div className="bg-white p-8 md:p-10 rounded-3xl shadow-xl max-w-md w-full border border-slate-100 text-center">
           
-          <div className="w-16 h-16 bg-brand/10 rounded-full flex items-center justify-center text-brand mx-auto mb-6">
-            <Activity size={32} />
+          <div className="w-16 h-16 bg-secondary rounded-full flex items-center justify-center  mx-auto mb-6">
+            {/* <Activity size={32} /> */}
+            <Image src="/logo2.png"
+                        width={50}
+                        height={50}
+                        alt="logo"/>
           </div>
           
           <h1 className="text-2xl font-bold text-slate-900 mb-2">SiM Claire Admin</h1>

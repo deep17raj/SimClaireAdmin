@@ -121,7 +121,7 @@ export default function AnalyticsDashboard() {
           <div className="w-full sm:w-72">
             <WalletCard
               title="Company Cost"
-              value={formatCurrency(data.total_revenue - data.total_profit, 'USD')}
+              value={formatCurrency(data.total_revenue - data.total_profit, 'CAD')}
               icon={<Receipt size={20} className="text-white" />}
               gradient="bg-gradient-to-r from-rose-500 to-rose-600"
             /></div>
@@ -163,7 +163,7 @@ export default function AnalyticsDashboard() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-4 lg:gap-6 mb-8">
             <MetricCard
               title="Total Revenue"
-              value={formatCurrency(data.total_revenue, 'USD')}
+              value={formatCurrency(data.total_revenue, 'CAD')}
               icon={<DollarSign size={24} />}
               color="text-emerald-600"
               bg="bg-emerald-100"
@@ -171,7 +171,7 @@ export default function AnalyticsDashboard() {
 
             <MetricCard
               title="Total Profit"
-              value={formatCurrency(data.total_profit, 'USD')}
+              value={formatCurrency(data.total_profit, 'CAD')}
               icon={<TrendingUp size={24} />}
               color="text-[#ec5b13]"
               bg="bg-[#ec5b13]/10"

@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Settings2, Users, LogOut, 
   Landmark, Tag, Menu, X, Building2, Activity,Smartphone, Terminal
 } from "lucide-react";
-
+import Image from "next/image";
 export default function AdminLayout({ children }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -97,7 +97,10 @@ export default function AdminLayout({ children }) {
       >
         <div className="p-6 border-b border-slate-800 flex items-center justify-between">
           <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-            <Activity className="text-[#ec5b13]" /> SiM Claire
+            <Image src="/logo2.png"
+            width={40}
+            height={40}
+            alt="logo"/> SiM Claire
           </h2>
           <button 
             onClick={() => setIsMobileMenuOpen(false)}
