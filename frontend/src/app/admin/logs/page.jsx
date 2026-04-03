@@ -3,8 +3,10 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { Terminal, Clock, Globe, ShieldAlert, Activity, RefreshCw, Smartphone, Monitor, Download } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export default function Logs() {
+  const router = useRouter()
   const [logs, setLogs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [limit, setLimit] = useState(50); // Default limit
@@ -20,6 +22,7 @@ export default function Logs() {
       // Handle the data array based on your backend structure
       setLogs(res.data?.data || res.data || []);
     } catch (err) {
+      router.push("/admin/login")
       console.error("Error fetching logs", err);
       // alert("Failed to load security logs.");
     } finally {

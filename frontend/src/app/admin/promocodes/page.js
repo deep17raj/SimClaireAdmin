@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import axios from "axios";
+import { useRouter } from "next/navigation";
 
 // --- Validation Schema ---
 const promoSchema = z.object({
@@ -24,6 +25,7 @@ const promoSchema = z.object({
 });
 
 export default function AdminPromoCodes() {
+  const router = useRouter()
   const adminToken = localStorage.getItem("adminToken");
   const [promoCodes, setPromoCodes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -60,6 +62,7 @@ export default function AdminPromoCodes() {
       setPromoCodes(res.data.data)
       setLoading(false)
     } catch (err) {
+      router.push("/admin/login")
       console.error("Failed to fetch promo codes", err);
       setLoading(false);
     }

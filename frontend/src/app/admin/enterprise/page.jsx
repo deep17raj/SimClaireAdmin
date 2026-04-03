@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import axios from "axios";
 import {
   Building2, Search, Filter, Calendar, Mail,
@@ -18,6 +19,7 @@ const formatDate = (dateString) => {
 };
 
 export default function EnterpriseAdminCMS() {
+  const router = useRouter()
   // Put this logic right above your button in the component
   const adminToken = localStorage.getItem("adminToken");
               const emailSubject = encodeURIComponent("Your SiM Claire IoT Inquiry");
@@ -79,6 +81,7 @@ export default function EnterpriseAdminCMS() {
       // Assume data is nested in standard REST format (e.g., res.data.data)
       setLeads(res.data.data || res.data || []);
     } catch (err) {
+      router.push("/admin/login")
       console.error("Failed to fetch enterprise leads:", err);
       setError("Failed to load leads. Please try again.");
     } finally {

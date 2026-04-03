@@ -10,8 +10,10 @@ import {
 
 // 🌟 Import your destination data
 import { allDestinations } from '@/data/destinationData';
+import { useRouter } from "next/navigation";
 
 export default function TaxManagementCMS() {
+  const router = useRouter()
   const adminToken = localStorage.getItem("adminToken");
   const [countries, setCountries] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -35,6 +37,7 @@ export default function TaxManagementCMS() {
       setCountries(res.data.data || res.data || []);
       setLoading(false);
     } catch (err) {
+      router.push("/admin/login")
       setError('Failed to load tax configurations.');
       setLoading(false);
     }

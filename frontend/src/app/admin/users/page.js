@@ -5,6 +5,7 @@ import axios from "axios";
  import { jsPDF } from "jspdf";
  import QRCode from "qrcode";
  import html2canvas from "html2canvas";
+ import { useRouter } from "next/navigation";
 import { 
   Search, CreditCard, Globe, Calendar, Hash, 
   CheckCircle2, XCircle, Clock, X, QrCode, ShieldAlert, 
@@ -51,6 +52,7 @@ const StatusBadge = ({ status, label = "" }) => {
 };
 
 export default function AdminUsersPanel() {
+  const router = useRouter()
   const adminToken = localStorage.getItem("adminToken");
   const [emailInput, setEmailInput] = useState("");
   
@@ -124,6 +126,7 @@ export default function AdminUsersPanel() {
         throw new Error("No details found for this SIM.");
       }
     } catch (err) {
+      router.push("/admin/login")
       console.error("Details fetch failed:", err);
       setDetailsError("Failed to load deep eSIM details.");
       setSelectedSim(null); 
@@ -192,6 +195,7 @@ export default function AdminUsersPanel() {
       document.body.removeChild(link);
 
     } catch (err) {
+      router.push("/admin/login")
       console.error("Export failed:", err);
       alert(err.response?.data?.message || "Failed to export data. Please try again.");
     } finally {
@@ -263,6 +267,7 @@ export default function AdminUsersPanel() {
       document.body.removeChild(link);
 
     } catch (err) {
+      router.push("/admin/login")
       console.error("Export all failed:", err);
       alert(err.response?.data?.message || "Failed to export data. Please try again.");
     } finally {

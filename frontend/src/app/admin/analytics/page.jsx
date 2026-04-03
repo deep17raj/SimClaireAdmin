@@ -3,6 +3,7 @@
 import { Users, CreditCard as CardSim, DollarSign, TrendingUp, MapPin, Activity, Wallet, Lock, Receipt } from "lucide-react";
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { useRouter } from "next/navigation";
 
 // Helper to format currency dynamically based on API response
 const formatCurrency = (amount, currencyCode = 'USD') => {
@@ -30,6 +31,7 @@ const getTypeColor = (type) => {
 };
 
 export default function AnalyticsDashboard() {
+  const router = useRouter()
   const adminToken = localStorage.getItem("adminToken");
   const [filter, setFilter] = useState("all");
   const [data, setData] = useState(null);
@@ -57,6 +59,7 @@ export default function AnalyticsDashboard() {
   }});
         setBalanceData(res.data.data);
       } catch (err) {
+        router.push("/admin/login")
         console.error("Failed to fetch admin balance:", err);
       }
     };
@@ -75,6 +78,7 @@ export default function AnalyticsDashboard() {
   }});
         setData(res.data.data);
       } catch (err) {
+        router.push("/admin/login")
         console.error("Failed to fetch analytics:", err);
         setError("Failed to load analytics data.");
       } finally {

@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import axios from "axios";
 import { allDestinations } from "@/data/destinationData"; 
+import { useRouter } from "next/navigation";
 
 // --- Validation Schema for Edit Form ---
 const pricingSchema = z.object({
@@ -15,6 +16,7 @@ const pricingSchema = z.object({
 });
 
 export default function AdminPricingPanel() {
+  const router = useRouter()
   const adminToken = localStorage.getItem("adminToken");
   const [simTypes, setSimTypes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -82,6 +84,7 @@ export default function AdminPricingPanel() {
       setSimTypes(baseTypes);
       setLoading(false);
     } catch (err) {
+      router.push("/admin/login")
       console.error("Failed to fetch pricing", err);
       setLoading(false);
     }

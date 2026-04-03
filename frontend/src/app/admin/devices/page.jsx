@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { Plus, Edit2, Trash2, Smartphone, X, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 const INITIAL_FORM_STATE = {
   brand_name: "",
@@ -18,6 +19,7 @@ const INITIAL_FORM_STATE = {
 };
 
 export default function Devices() {
+  const router = useRouter()
   const [devices, setDevices] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -36,6 +38,7 @@ export default function Devices() {
       setDevices(res.data?.data || res.data || []);
     } catch (err) {
       console.error("Error fetching devices", err);
+      router.push("/admin/login")
       alert("Failed to load devices.");
     } finally {
       setIsLoading(false);
