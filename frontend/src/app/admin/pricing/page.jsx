@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect,useRef } from "react";
 import { Edit2, TrendingUp, AlertCircle, Globe, Trash2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -35,9 +35,23 @@ export default function AdminPricingPanel() {
   const { register, handleSubmit, reset, setValue, formState: { errors, isSubmitting } } = useForm({
     resolver: zodResolver(pricingSchema),
   });
-
+const hasPrompted = useRef(false);
   // --- 1. Fetch Existing Data ---
   useEffect(() => {
+    // 2. If we already asked, stop immediately
+    if (hasPrompted.current) return;
+    
+    // 3. Mark that we are asking right now
+    hasPrompted.current = true;
+
+    const enteredPassword = window.prompt("Enter admin PIN to access pricing settings:");
+    
+    if (enteredPassword !== process.env.NEXT_PUBLIC_ADMIN_PIN) {
+      alert("Incorrect PIN. Access denied.");
+      router.back(); // Redirect to previous page
+      return; // Stop execution entirely
+    }
+    
     fetchPricingData();
   }, []);
 
