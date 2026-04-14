@@ -131,6 +131,8 @@ export default function AdminUsersPanel() {
       const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/admin/get/user/esimHistorybyId/${esim_history_id}`, {
         headers: { Authorization: `Bearer ${adminToken}` }
       });
+
+      console.log("SIM details response:", res.data.data.raw_response); // Log the raw response for debugging
       
       if (res.data && res.data.data) {
         setSelectedSim(res.data.data);
@@ -982,10 +984,16 @@ const enteredPassword = window.prompt("Enter admin PIN to update the order. This
               </div>
             ) : (
               <div className="flex flex-col gap-5">
-                {userSims.map((sim) => (
+                {userSims.map((sim,index) => (
                   <div 
-                    key={sim.esim_history_id} 
-                    onClick={() => handleCardClick(sim.esim_history_id)}
+                    key={sim.esim_history_id || sim.order_id || `fallback-key-${index}`} 
+    
+    // 2. Only fire the function if the ID actually exists
+    onClick={() => {
+      if (sim.esim_history_id) {
+        handleCardClick(sim.esim_history_id);
+      }
+    }}
                     className="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md hover:border-[#077770]/40 transition-all cursor-pointer group flex flex-col overflow-hidden"
                   >
                     <div className="bg-gray-50/50 border-b border-gray-100 p-4 sm:px-6 flex flex-col sm:flex-row justify-between sm:items-center gap-4">
@@ -1101,6 +1109,7 @@ const enteredPassword = window.prompt("Enter admin PIN to update the order. This
                   <h3 className="text-2xl font-extrabold text-gray-900 tracking-tight">
                     {isEditingOrder ? "Edit Manual Fulfillment" : "eSIM Record"}
                   </h3>
+                  <p><span className="font-bold">Status Description: </span>{selectedSim.raw_response?.statusdesc}</p>
                   {!isEditingOrder && (
                     <p className="text-sm text-gray-500 mt-1 font-medium flex items-center gap-2">
                       History ID: <span className="font-mono bg-gray-200 px-1.5 py-0.5 rounded text-gray-700">#{selectedSim.esim_history_id || "Loading..."}</span> | User ID: <span className="font-mono bg-gray-200 px-1.5 py-0.5 rounded text-gray-700">#{selectedSim.user_id}</span>

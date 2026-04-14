@@ -11,7 +11,7 @@ import { useRouter } from "next/navigation";
 // --- Validation Schema ---
 const promoSchema = z.object({
   code: z.string().min(3, "Code must be at least 3 characters").toUpperCase().trim(),
-  discount_type: z.enum(["percentage", "flat"]),
+  discount_type: z.enum(["percentage"]),
   discount_value: z.coerce.number().min(0.1, "Value must be greater than 0"),
   max_discount: z.coerce.number().optional().or(z.literal("")),
   min_order_amount: z.coerce.number().optional().or(z.literal("")),
@@ -347,10 +347,10 @@ export default function AdminPromoCodes() {
                       <input type="radio" value="percentage" {...register("discount_type")} className="hidden" />
                       <Percent size={14}/> Percentage
                     </label>
-                    <label className={`flex-1 flex items-center justify-center gap-2 py-1.5 rounded-lg text-sm font-bold cursor-pointer transition-all ${selectedDiscountType === 'flat' ? 'bg-white shadow-sm text-slate-900 border border-gray-200' : 'text-gray-500 hover:text-gray-700'}`}>
+                    {/* <label className={`flex-1 flex items-center justify-center gap-2 py-1.5 rounded-lg text-sm font-bold cursor-pointer transition-all ${selectedDiscountType === 'flat' ? 'bg-white shadow-sm text-slate-900 border border-gray-200' : 'text-gray-500 hover:text-gray-700'}`}>
                       <input type="radio" value="flat" {...register("discount_type")} className="hidden" />
                       <DollarSign size={14}/> Flat Amount
-                    </label>
+                    </label> */}
                   </div>
                 </div>
               </div>
