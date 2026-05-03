@@ -327,6 +327,7 @@ export default function AdminPlanControlPage() {
                   <th className="px-6 py-4">Base Price</th>
                   <th className="px-6 py-4 text-center">Multiplier</th>
                   <th className="px-6 py-4 text-right">Final Price</th>
+                  <th className="px-6 py-4 text-right">Profit Margin</th>
                   <th className="px-6 py-4 text-center">Status</th>
                   <th className="px-6 py-4 text-right">Actions</th>
                 </tr>
@@ -393,7 +394,7 @@ export default function AdminPlanControlPage() {
                             />
                           ) : (
                             <span className={`font-bold ${isConfigured ? 'text-gray-900' : 'text-gray-300'}`}>
-                              x {displayMultiplier.toFixed(2)}
+                              x {displayMultiplier.toFixed(4)}
                             </span>
                           )}
                         </td>
@@ -401,6 +402,9 @@ export default function AdminPlanControlPage() {
                         {/* Final Price */}
                         <td className="px-6 py-4 text-right font-bold text-gray-900 text-base">
                           CAD {finalPrice.toFixed(2)}
+                        </td>
+                        <td className="px-6 py-4 text-right font-bold text-gray-900 text-base">
+                          CAD {(finalPrice.toFixed(2)-basePrice.toFixed(2)).toFixed(2)}
                         </td>
 
                         {/* Status Label (or Input) */}
