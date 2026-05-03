@@ -13,6 +13,7 @@ export default function AdminPlanControlPage() {
   const params = useParams();
   const router = useRouter();
   const destinationID = params.destinationId; // e.g., "CA-1"
+    const adminToken = typeof window !== 'undefined' ? localStorage.getItem("adminToken") : null;
 
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -42,7 +43,9 @@ export default function AdminPlanControlPage() {
   const fetchPlans = async () => {
     try {
       setLoading(true);
-      const res = await axios.get(`${API_BASE}/admin/plan-control?country_code=${destinationID}`);
+      const res = await axios.get(`${API_BASE}/admin/plan-control?country_code=${destinationID}`, {
+        headers: { Authorization: `Bearer ${adminToken}` }
+      });
       if (res.data?.data?.plans) {
         setPlans(res.data.data.plans);
       }
@@ -130,9 +133,13 @@ export default function AdminPlanControlPage() {
       };
 
       if (plan.is_configured) {
-        await axios.put(`${API_BASE}/admin/plan-control/update`, payload);
+        await axios.put(`${API_BASE}/admin/plan-control/update`, payload, {
+        headers: { Authorization: `Bearer ${adminToken}` }
+      });
       } else {
-        await axios.post(`${API_BASE}/admin/plan-control/add`, payload);
+        await axios.post(`${API_BASE}/admin/plan-control/add`, payload, {
+        headers: { Authorization: `Bearer ${adminToken}` }
+      });
       }
       
       setEditingPlanId(null);
@@ -150,6 +157,8 @@ export default function AdminPlanControlPage() {
     try {
       await axios.delete(`${API_BASE}/admin/plan-control/delete`, {
         data: { plan_id: planID, country_code: destinationID }
+      }, {
+        headers: { Authorization: `Bearer ${adminToken}` }
       });
       fetchPlans();
     } catch (err) {
