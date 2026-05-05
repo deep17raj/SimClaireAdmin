@@ -403,10 +403,21 @@ export default function AdminPlanControlPage() {
                         </td>
 
                         {/* Attributes */}
-                        <td className="px-4 py-4 font-medium text-gray-700">
-                          {plan.productDataType === "unlimited" ? "Unlimited" : `${plan.productDataAllowance}${plan.dataAllowanceUnit}`} / {plan.productValidityDays} Days<br></br>
-                          <span>Voice:</span> {plan.productVoice === 'Yes' || plan.productVoiceMinutes > 0 ? `${plan.productVoiceMinutes} Mins` : 'None'}
-                        </td>
+                       <td className="px-2 py-4 font-medium text-gray-700">
+  <span className={
+    plan.productDataType === "unlimited" ? "text-emerald-600 font-bold" : 
+    plan.productDataType === "daily" ? "text-blue-600 font-bold" : 
+    "text-orange-600 font-bold"
+  }>
+    {plan.productDataType === "unlimited" 
+      ? "Unlimited" 
+      : `${plan.productDataAllowance}${plan.dataAllowanceUnit} ${plan.productDataType === "daily" ? "Daily" : "Total"}`}
+  </span>
+  {' '} <br /> Validity: {plan.productValidityDays} Days<br></br>
+  
+  <span className="text-gray-500 text-xs">Voice:</span>{' '} 
+  {plan.productVoice === 'Yes' || plan.productVoiceMinutes > 0 ? `${plan.productVoiceMinutes} Mins` : 'None'}
+</td>
 
                         {/* Base Price */}
                         <td className="px-6 py-4 font-bold text-gray-500">
