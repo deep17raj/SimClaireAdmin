@@ -50,6 +50,7 @@ export default function AdminPlanControlPage() {
       if (res.data?.data?.plans) {
         setPlans(res.data.data.plans);
       }
+      console.log(res.data.data.plans)
       setLoading(false);
     } catch (err) {
       console.error("Failed to fetch plans:", err);
@@ -188,7 +189,7 @@ export default function AdminPlanControlPage() {
 
       // 4. Features Filter (Voice/SMS)
       let matchesFeatures = true;
-      const hasVoice = p.productVoice === 'YES' || parseInt(p.productVoiceMinutes || 0) > 0;
+      const hasVoice = p.productVoice === 'Yes' || parseInt(p.productVoiceMinutes || 0) > 0;
       if (filterFeatures === "data_only") matchesFeatures = !hasVoice;
       if (filterFeatures === "with_voice") matchesFeatures = hasVoice;
 
@@ -402,8 +403,9 @@ export default function AdminPlanControlPage() {
                         </td>
 
                         {/* Attributes */}
-                        <td className="px-6 py-4 font-medium text-gray-700">
-                          {plan.productDataType === "unlimited" ? "Unlimited" : `${plan.productDataAllowance}${plan.dataAllowanceUnit}`} / {plan.productValidityDays} Days
+                        <td className="px-4 py-4 font-medium text-gray-700">
+                          {plan.productDataType === "unlimited" ? "Unlimited" : `${plan.productDataAllowance}${plan.dataAllowanceUnit}`} / {plan.productValidityDays} Days<br></br>
+                          <span>Voice:</span> {plan.productVoice === 'Yes' || plan.productVoiceMinutes > 0 ? `${plan.productVoiceMinutes} Mins` : 'None'}
                         </td>
 
                         {/* Base Price */}
@@ -504,8 +506,8 @@ export default function AdminPlanControlPage() {
                                 <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1"><Info size={14}/> Network Specs</h4>
                                 <ul className="space-y-1 text-sm text-gray-700 font-medium">
                                   <li><span className="text-gray-500">Operator:</span> {plan.operatorName || 'N/A'}</li>
-                                  <li><span className="text-gray-500">Voice:</span> {plan.productVoice === 'YES' || plan.productVoice > 0 ? `${plan.productVoiceMinutes} Mins` : 'None'}</li>
-                                  <li><span className="text-gray-500">SMS:</span> {plan.productSms === 'YES' || plan.productSms > 0 ? `${plan.productSmsCount} SMS` : 'None'}</li>
+                                  <li><span className="text-gray-500">Voice:</span> {plan.productVoice === 'Yes' || plan.productVoiceMinutes > 0 ? `${plan.productVoiceMinutes} Mins` : 'None'}</li>
+                                  <li><span className="text-gray-500">SMS:</span> {plan.productSms === 'Yes' || plan.productSms > 0 ? `${plan.productSmsCount} SMS` : 'None'}</li>
                                 </ul>
                               </div>
 
