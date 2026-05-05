@@ -76,7 +76,7 @@ const AdminDestinationsPage = () => {
                       {country.destinationName}
                     </h2>
                     <span className="text-xs font-mono font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded uppercase">
-                      {country.isoCode}
+                      {country.destinationID}
                     </span>
                   </div>
                 </div>
