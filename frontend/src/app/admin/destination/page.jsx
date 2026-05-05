@@ -11,7 +11,7 @@ const AdminDestinationsPage = () => {
   // Filter countries based on search
   const filteredCountries = allDestinations.filter((country) =>
     country.destinationName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    country.isoCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    country.destinationID.toLowerCase().includes(searchQuery.toLowerCase()) ||
     country.region.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
