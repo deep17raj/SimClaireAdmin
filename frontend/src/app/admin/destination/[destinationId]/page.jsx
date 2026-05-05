@@ -13,7 +13,7 @@ export default function AdminPlanControlPage() {
   const params = useParams();
   const router = useRouter();
   const destinationID = params.destinationId; // e.g., "CA-1"
-    const adminToken = typeof window !== 'undefined' ? localStorage.getItem("adminToken") : null;
+  const adminToken = typeof window !== 'undefined' ? localStorage.getItem("adminToken") : null;
 
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -24,8 +24,11 @@ export default function AdminPlanControlPage() {
   const [filterStatus, setFilterStatus] = useState("all"); 
   const [filterDataType, setFilterDataType] = useState("all"); 
   const [filterFeatures, setFilterFeatures] = useState("all"); 
-  const [filterValidity, setFilterValidity] = useState("all"); // 🌟 NEW: Validity state
-  const [sortBy, setSortBy] = useState("default"); 
+  const [filterValidity, setFilterValidity] = useState("all");
+  const [filterSimType, setFilterSimType] = useState("all"); // 🌟 NEW: SIM Type filter
+  
+  const [sortPrice, setSortPrice] = useState("default"); // 🌟 NEW: Split sort for price
+  const [sortValidity, setSortValidity] = useState("default"); // 🌟 NEW: Split sort for validity
 
   // UI States
   const [expandedPlanId, setExpandedPlanId] = useState(null);
@@ -50,7 +53,6 @@ export default function AdminPlanControlPage() {
       if (res.data?.data?.plans) {
         setPlans(res.data.data.plans);
       }
-      console.log(res.data.data.plans)
       setLoading(false);
     } catch (err) {
       console.error("Failed to fetch plans:", err);
@@ -193,7 +195,7 @@ export default function AdminPlanControlPage() {
       if (filterFeatures === "data_only") matchesFeatures = !hasVoice;
       if (filterFeatures === "with_voice") matchesFeatures = hasVoice;
 
-      // 5. 🌟 NEW: Validity (Days) Filter 🌟
+      // 5. Validity (Days) Filter
       let matchesValidity = true;
       const days = parseInt(p.productValidityDays || 0, 10);
       if (filterValidity === "short") matchesValidity = days >= 1 && days <= 7;
@@ -201,11 +203,17 @@ export default function AdminPlanControlPage() {
       if (filterValidity === "long") matchesValidity = days >= 16 && days <= 30;
       if (filterValidity === "extended") matchesValidity = days > 30;
 
-      return matchesSearch && matchesStatus && matchesData && matchesFeatures && matchesValidity;
+      // 6. 🌟 NEW: SIM Type Filter 🌟
+      let matchesSimType = true;
+      const typeNum = parseInt(p.productType || 0, 10);
+      if (filterSimType === "1_2") matchesSimType = typeNum >= 1 && typeNum <= 2;
+      if (filterSimType === "3_5") matchesSimType = typeNum >= 3 && typeNum <= 5;
+
+      return matchesSearch && matchesStatus && matchesData && matchesFeatures && matchesValidity && matchesSimType;
     })
     .sort((a, b) => {
-      // If default, maintain original API array order
-      if (sortBy === "default") return 0;
+      // If no sorts applied, maintain original API array order
+      if (sortPrice === "default" && sortValidity === "default") return 0;
 
       // Calculate Final Prices for accurate sorting
       const multA = a.is_configured ? parseFloat(a.control?.custom_multiplier || 1) : 1;
@@ -217,10 +225,15 @@ export default function AdminPlanControlPage() {
       const valA = parseInt(a.productValidityDays || 0);
       const valB = parseInt(b.productValidityDays || 0);
 
-      if (sortBy === "price_asc") return priceA - priceB;
-      if (sortBy === "price_desc") return priceB - priceA;
-      if (sortBy === "validity_asc") return valA - valB;
-      if (sortBy === "validity_desc") return valB - valA;
+      // Sort logic
+      if (sortPrice !== "default") {
+        if (priceA !== priceB) return sortPrice === "asc" ? priceA - priceB : priceB - priceA;
+      }
+      
+      if (sortValidity !== "default") {
+        if (valA !== valB) return sortValidity === "asc" ? valA - valB : valB - valA;
+      }
+
       return 0;
     });
 
@@ -257,7 +270,7 @@ export default function AdminPlanControlPage() {
           </div>
 
           {/* Filters & Sort Bar */}
-          <div className="flex flex-col lg:flex-row items-center gap-3 bg-gray-50 p-3 rounded-xl border border-gray-100">
+          <div className="flex flex-col lg:flex-row items-center gap-3 bg-gray-50 p-3 rounded-xl border border-gray-100 flex-wrap">
             
             {/* Search */}
             <div className="relative w-full lg:w-64 shrink-0">
@@ -274,7 +287,7 @@ export default function AdminPlanControlPage() {
             <div className="h-6 w-px bg-gray-300 hidden lg:block mx-1"></div>
 
             {/* Filters */}
-            <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full">
+            <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto flex-1">
               <div className="flex items-center gap-2 w-full sm:w-auto">
                 <Filter className="h-4 w-4 text-gray-400 shrink-0" />
                 <select 
@@ -289,6 +302,17 @@ export default function AdminPlanControlPage() {
                   <option value="unreleased">Unreleased</option>
                 </select>
               </div>
+
+              {/* 🌟 NEW: SIM Type Dropdown 🌟 */}
+              <select 
+                value={filterSimType}
+                onChange={(e) => setFilterSimType(e.target.value)}
+                className="w-full sm:w-auto bg-white border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-blue-500 block p-2 outline-none cursor-pointer"
+              >
+                <option value="all">All SIM Types</option>
+                <option value="1_2">Type 1 to 2</option>
+                <option value="3_5">Type 3 to 5</option>
+              </select>
 
               <select 
                 value={filterDataType}
@@ -310,7 +334,6 @@ export default function AdminPlanControlPage() {
                 <option value="with_voice">Includes Voice</option>
               </select>
 
-              {/* 🌟 NEW: Validity Dropdown 🌟 */}
               <select 
                 value={filterValidity}
                 onChange={(e) => setFilterValidity(e.target.value)}
@@ -326,19 +349,34 @@ export default function AdminPlanControlPage() {
 
             <div className="h-6 w-px bg-gray-300 hidden lg:block mx-1"></div>
 
-            {/* Sort */}
-            <div className="flex items-center gap-2 w-full lg:w-auto shrink-0">
+            {/* 🌟 SPLIT: Sorting Options 🌟 */}
+            <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full lg:w-auto shrink-0">
               <ArrowUpDown className="h-4 w-4 text-gray-400 shrink-0" />
+              
               <select 
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="w-full lg:w-auto bg-white border border-gray-200 text-gray-700 text-sm font-semibold rounded-lg focus:ring-blue-500 block p-2 outline-none cursor-pointer"
+                value={sortPrice}
+                onChange={(e) => {
+                  setSortPrice(e.target.value);
+                  setSortValidity("default"); // Auto-reset validity sort for clean UX
+                }}
+                className="w-full sm:w-auto bg-white border border-gray-200 text-gray-700 text-sm font-semibold rounded-lg focus:ring-blue-500 block p-2 outline-none cursor-pointer"
               >
-                <option value="default">Sort By: Default</option>
-                <option value="price_asc">Price: Low to High</option>
-                <option value="price_desc">Price: High to Low</option>
-                <option value="validity_asc">Validity: Short to Long</option>
-                <option value="validity_desc">Validity: Long to Short</option>
+                <option value="default">Sort Price: Default</option>
+                <option value="asc">Price: Low to High</option>
+                <option value="desc">Price: High to Low</option>
+              </select>
+
+              <select 
+                value={sortValidity}
+                onChange={(e) => {
+                  setSortValidity(e.target.value);
+                  setSortPrice("default"); // Auto-reset price sort for clean UX
+                }}
+                className="w-full sm:w-auto bg-white border border-gray-200 text-gray-700 text-sm font-semibold rounded-lg focus:ring-blue-500 block p-2 outline-none cursor-pointer"
+              >
+                <option value="default">Sort Validity: Default</option>
+                <option value="asc">Validity: Short to Long</option>
+                <option value="desc">Validity: Long to Short</option>
               </select>
             </div>
 
@@ -404,20 +442,20 @@ export default function AdminPlanControlPage() {
 
                         {/* Attributes */}
                        <td className="px-2 py-4 font-medium text-gray-700">
-  <span className={
-    plan.productDataType === "unlimited" ? "text-emerald-600 font-bold" : 
-    plan.productDataType === "daily" ? "text-blue-600 font-bold" : 
-    "text-orange-600 font-bold"
-  }>
-    {plan.productDataType === "unlimited" 
-      ? "Unlimited" 
-      : `${plan.productDataAllowance}${plan.dataAllowanceUnit} ${plan.productDataType === "daily" ? "Daily" : "Total"}`}
-  </span>
-  {' '} <br /> Validity: {plan.productValidityDays} Days<br></br>
-  
-  <span className="text-gray-500 text-xs">Voice:</span>{' '} 
-  {plan.productVoice === 'Yes' || plan.productVoiceMinutes > 0 ? `${plan.productVoiceMinutes} Mins` : 'None'}
-</td>
+                          <span className={
+                            plan.productDataType === "unlimited" ? "text-emerald-600 font-bold" : 
+                            plan.productDataType === "daily" ? "text-blue-600 font-bold" : 
+                            "text-orange-600 font-bold"
+                          }>
+                            {plan.productDataType === "unlimited" 
+                              ? "Unlimited" 
+                              : `${plan.productDataAllowance}${plan.dataAllowanceUnit} ${plan.productDataType === "daily" ? "Daily" : "Total"}`}
+                          </span>
+                          {' '} <br /> Validity: {plan.productValidityDays} Days<br></br>
+                          
+                          <span className="text-gray-500 text-xs">Voice:</span>{' '} 
+                          {plan.productVoice === 'Yes' || plan.productVoiceMinutes > 0 ? `${plan.productVoiceMinutes} Mins` : 'None'}
+                        </td>
 
                         {/* Base Price */}
                         <td className="px-6 py-4 font-bold text-gray-500">
