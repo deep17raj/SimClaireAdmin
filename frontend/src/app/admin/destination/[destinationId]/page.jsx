@@ -24,7 +24,8 @@ export default function AdminPlanControlPage() {
   const [filterStatus, setFilterStatus] = useState("all"); 
   const [filterDataType, setFilterDataType] = useState("all"); 
   const [filterFeatures, setFilterFeatures] = useState("all"); 
-  const [sortBy, setSortBy] = useState("default"); // NEW: Sort state
+  const [filterValidity, setFilterValidity] = useState("all"); // 🌟 NEW: Validity state
+  const [sortBy, setSortBy] = useState("default"); 
 
   // UI States
   const [expandedPlanId, setExpandedPlanId] = useState(null);
@@ -156,8 +157,7 @@ export default function AdminPlanControlPage() {
     
     try {
       await axios.delete(`${API_BASE}/admin/plan-control/delete`, {
-        data: { plan_id: planID, country_code: destinationID }
-      }, {
+        data: { plan_id: planID, country_code: destinationID },
         headers: { Authorization: `Bearer ${adminToken}` }
       });
       fetchPlans();
@@ -192,7 +192,15 @@ export default function AdminPlanControlPage() {
       if (filterFeatures === "data_only") matchesFeatures = !hasVoice;
       if (filterFeatures === "with_voice") matchesFeatures = hasVoice;
 
-      return matchesSearch && matchesStatus && matchesData && matchesFeatures;
+      // 5. 🌟 NEW: Validity (Days) Filter 🌟
+      let matchesValidity = true;
+      const days = parseInt(p.productValidityDays || 0, 10);
+      if (filterValidity === "short") matchesValidity = days >= 1 && days <= 7;
+      if (filterValidity === "medium") matchesValidity = days >= 8 && days <= 15;
+      if (filterValidity === "long") matchesValidity = days >= 16 && days <= 30;
+      if (filterValidity === "extended") matchesValidity = days > 30;
+
+      return matchesSearch && matchesStatus && matchesData && matchesFeatures && matchesValidity;
     })
     .sort((a, b) => {
       // If default, maintain original API array order
@@ -299,6 +307,19 @@ export default function AdminPlanControlPage() {
                 <option value="all">All Features</option>
                 <option value="data_only">Data Only</option>
                 <option value="with_voice">Includes Voice</option>
+              </select>
+
+              {/* 🌟 NEW: Validity Dropdown 🌟 */}
+              <select 
+                value={filterValidity}
+                onChange={(e) => setFilterValidity(e.target.value)}
+                className="w-full sm:w-auto bg-white border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-blue-500 block p-2 outline-none cursor-pointer"
+              >
+                <option value="all">All Durations</option>
+                <option value="short">1 - 7 Days</option>
+                <option value="medium">8 - 15 Days</option>
+                <option value="long">16 - 30 Days</option>
+                <option value="extended">31+ Days</option>
               </select>
             </div>
 
