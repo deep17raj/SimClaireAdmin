@@ -42,6 +42,7 @@ export default function AdminLayout({ children }) {
 
   const menuItems = [
     { name: "Analytics", icon: <LayoutDashboard size={20} />, path: "/admin/analytics" },
+    { name: "Partner Analytics", icon: <LayoutDashboard size={20} />, path: "/admin/partners/analytics" },
     // { name: "Pricing & Types", icon: <Settings2 size={20} />, path: "/admin/pricing" },
     { name: "Promo Codes & Offers", icon: <Tag size={20} />, path: "/admin/promocodes" },
     { name: "Manage Plans", icon: <Settings2 size={20} />, path: "/admin/destination" },

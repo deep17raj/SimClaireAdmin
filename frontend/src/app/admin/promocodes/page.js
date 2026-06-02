@@ -1,12 +1,15 @@
 "use client";
 
-import { useState, useEffect, Fragment } from "react"; // 🌟 ADDED Fragment HERE
+import { useState, useEffect, Fragment } from "react"; 
 import { Tag, Plus, Trash2, Calendar, AlertCircle, Percent, DollarSign, X, ChevronDown, ChevronUp } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import axios from "axios";
 import { useRouter } from "next/navigation";
+
+// 🌟 Import your destinations data
+import { allDestinations } from "@/data/destinationData";
 
 // --- Validation Schema ---
 const promoSchema = z.object({
@@ -19,7 +22,7 @@ const promoSchema = z.object({
   user_usage_limit: z.coerce.number().min(1, "Must be at least 1"),
   valid_from: z.string().min(1, "Start date is required"),
   valid_until: z.string().min(1, "End date is required"),
-  country_code: z.string().optional(),
+  country_code: z.string().optional().or(z.literal("")),
   sim_type: z.coerce.number().optional().or(z.literal("")),
   is_active: z.boolean().default(true),
 });
@@ -42,6 +45,8 @@ export default function AdminPromoCodes() {
       is_active: true,
       usage_limit: 500,
       user_usage_limit: 1,
+      country_code: "",
+      sim_type: ""
     }
   });
 
@@ -55,10 +60,10 @@ export default function AdminPromoCodes() {
   const fetchPromoCodes = async () => {
     try {
       const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/admin/promocode`, {
-  headers: {
-    Authorization: `Bearer ${adminToken}` // 🌟 Pass the token to the backend
-  }});
-      // console.log(res.data)
+        headers: {
+          Authorization: `Bearer ${adminToken}` 
+        }
+      });
       setPromoCodes(res.data.data)
       setLoading(false)
     } catch (err) {
@@ -69,15 +74,14 @@ export default function AdminPromoCodes() {
   };
 
   // --- 2. Add Promo Code ---
- const onSubmit = async (data) => {
+  const onSubmit = async (data) => {
     setActionError("");
     
-    // 🌟 NEW: Prompt for password to prevent accidental creation
     const enteredPassword = window.prompt("Enter admin PIN to create this promo code:");
     
     if (enteredPassword !== process.env.NEXT_PUBLIC_ADMIN_PIN) {
       alert("Incorrect PIN. Creation cancelled.");
-      return; // Stop execution entirely
+      return; 
     }
 
     // Clean up empty optional fields for the backend
@@ -105,12 +109,11 @@ export default function AdminPromoCodes() {
   };
 
   const handleDelete = async (id) => {
-    // 🌟 REPLACED window.confirm with window.prompt for the password check
     const enteredPassword = window.prompt("Enter admin PIN to delete this promo code. This cannot be undone:");
     
     if (enteredPassword !== process.env.NEXT_PUBLIC_ADMIN_PIN) {
       alert("Incorrect PIN. Deletion cancelled.");
-      return; // Stop execution entirely
+      return; 
     }
 
     try {
@@ -137,6 +140,13 @@ export default function AdminPromoCodes() {
     if (!dateString) return "N/A";
     const date = new Date(dateString);
     return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  };
+
+  // 🌟 Helper to get Country Name from ID for the table display
+  const getCountryName = (destId) => {
+    if (!destId) return "Global (All)";
+    const dest = allDestinations.find(d => d.destinationID === destId);
+    return dest ? dest.destinationName : destId;
   };
 
   // Toggle Row Expansion
@@ -186,7 +196,7 @@ export default function AdminPromoCodes() {
                 {promoCodes.length === 0 ? (
                   <tr><td colSpan="6" className="text-center p-8 text-gray-500">No promo codes found.</td></tr>
                 ) : promoCodes.map((promo) => (
-                  <Fragment key={promo.id}> {/* 🌟 CHANGED THIS TO Fragment 🌟 */}
+                  <Fragment key={promo.id}>
                     {/* Main Row */}
                     <tr className="hover:bg-gray-50/50 transition-colors">
                       <td className="p-5">
@@ -280,18 +290,19 @@ export default function AdminPromoCodes() {
                               </div>
                               <div>
                                 <p className="text-gray-500 text-xs uppercase tracking-wider mb-1">Country Restrict</p>
-                                <p className="font-bold text-slate-800">{promo.country_code || "Global (All)"}</p>
+                                {/* 🌟 Using Helper to display Country Name instead of ID */}
+                                <p className="font-bold text-slate-800">{getCountryName(promo.country_code)}</p>
                               </div>
                               <div>
                                 <p className="text-gray-500 text-xs uppercase tracking-wider mb-1">SIM Type Restrict</p>
-                                <p className="font-bold text-slate-800">{promo.sim_type || "All SIMs"}</p>
+                                <p className="font-bold text-slate-800">{promo.sim_type ? `Type ${promo.sim_type}` : "All SIMs"}</p>
                               </div>
                             </div>
                           </div>
                         </td>
                       </tr>
                     )}
-                  </Fragment> /* 🌟 CLOSING FRAGMENT 🌟 */
+                  </Fragment>
                 ))}
               </tbody>
             </table>
@@ -347,10 +358,6 @@ export default function AdminPromoCodes() {
                       <input type="radio" value="percentage" {...register("discount_type")} className="hidden" />
                       <Percent size={14}/> Percentage
                     </label>
-                    {/* <label className={`flex-1 flex items-center justify-center gap-2 py-1.5 rounded-lg text-sm font-bold cursor-pointer transition-all ${selectedDiscountType === 'flat' ? 'bg-white shadow-sm text-slate-900 border border-gray-200' : 'text-gray-500 hover:text-gray-700'}`}>
-                      <input type="radio" value="flat" {...register("discount_type")} className="hidden" />
-                      <DollarSign size={14}/> Flat Amount
-                    </label> */}
                   </div>
                 </div>
               </div>
@@ -429,21 +436,35 @@ export default function AdminPromoCodes() {
 
               {/* 4. Filters & Flags */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                
+                {/* 🌟 NEW: Select Dropdown for Country Code */}
                 <div>
                   <label className="block text-sm font-bold text-slate-700 mb-1.5">Specific Country (Optional)</label>
-                  <input
+                  <select
                     {...register("country_code")}
-                    placeholder="e.g. US, JPN"
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-[#ec5b13] transition-all"
-                  />
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-[#ec5b13] transition-all cursor-pointer"
+                  >
+                    <option value="">Global (All Countries)</option>
+                    {allDestinations.map(dest => (
+                      <option key={dest.destinationID} value={dest.destinationID}>
+                        {dest.destinationName}
+                      </option>
+                    ))}
+                  </select>
                 </div>
+
+                {/* 🌟 NEW: Select Dropdown for SIM Type */}
                 <div>
                   <label className="block text-sm font-bold text-slate-700 mb-1.5">Specific SIM Type (Optional)</label>
-                  <input
+                  <select
                     {...register("sim_type")}
-                    type="number" placeholder="e.g. 1"
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-[#ec5b13] transition-all"
-                  />
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-[#ec5b13] transition-all cursor-pointer"
+                  >
+                    <option value="">All SIM Types</option>
+                    <option value="1">Type 1</option>
+                    <option value="2">Type 2</option>
+                    <option value="3">Type 3</option>
+                  </select>
                 </div>
               </div>
 
