@@ -55,8 +55,9 @@ export default function AdminPartnerAnalyticsPage() {
                 const res = await axios.get(queryUrl, {
                     headers: { Authorization: `Bearer ${adminToken}` }
                 });
-
-                if (res.data.success) {
+                console.log(res.data)
+                // Added broader check for success state
+                if (res.data.success || res.data.status === 200 || res.status === 200) {
                     setAnalyticsData(res.data.data);
                 } else {
                     setError(res.data.message || "Failed to load analytics data.");
@@ -122,7 +123,7 @@ export default function AdminPartnerAnalyticsPage() {
                 </div>
             ) : analyticsData ? (
                 <>
-                    {/* TOP SUMMARY CARDS */}
+                    {/* TOP SUMMARY CARDS (Safely Chained) */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                         
                         {/* Total Revenue */}
@@ -135,7 +136,8 @@ export default function AdminPartnerAnalyticsPage() {
                             </div>
                             <p className="text-sm text-slate-500 font-semibold mb-1">Total Partner Sales</p>
                             <h3 className="text-3xl font-extrabold text-slate-900">
-                                {formatCurrency(analyticsData.summary.total_partner_sales)}
+                                {/* 🌟 Safe Chaining Used Here */}
+                                {formatCurrency(analyticsData?.summary?.total_partner_sales || 0)}
                             </h3>
                         </div>
 
@@ -148,7 +150,8 @@ export default function AdminPartnerAnalyticsPage() {
                             </div>
                             <p className="text-sm text-slate-500 font-semibold mb-1">Paid / Total Orders</p>
                             <h3 className="text-3xl font-extrabold text-slate-900">
-                                {analyticsData.summary.paid_partner_orders} <span className="text-xl text-slate-400">/ {analyticsData.summary.total_partner_orders}</span>
+                                {/* 🌟 Safe Chaining Used Here */}
+                                {analyticsData?.summary?.paid_partner_orders || 0} <span className="text-xl text-slate-400">/ {analyticsData?.summary?.total_partner_orders || 0}</span>
                             </h3>
                         </div>
 
@@ -161,7 +164,8 @@ export default function AdminPartnerAnalyticsPage() {
                             </div>
                             <p className="text-sm text-slate-500 font-semibold mb-1">Partners Generating Sales</p>
                             <h3 className="text-3xl font-extrabold text-slate-900">
-                                {analyticsData.summary.partners_with_sales} <span className="text-xl text-slate-400">/ {analyticsData.summary.total_partners}</span>
+                                {/* 🌟 Safe Chaining Used Here */}
+                                {analyticsData?.summary?.partners_with_sales || 0} <span className="text-xl text-slate-400">/ {analyticsData?.summary?.total_partners || 0}</span>
                             </h3>
                         </div>
 
@@ -174,12 +178,14 @@ export default function AdminPartnerAnalyticsPage() {
                                 <span className="text-xs font-bold text-orange-700 bg-white px-2 py-1 rounded-md shadow-sm">Top Performer</span>
                             </div>
                             <p className="text-sm text-orange-600/80 font-bold mb-1 relative z-10">
-                                {analyticsData.top_partner ? "Highest Sales" : "No Sales Yet"}
+                                {/* 🌟 Safe Chaining Used Here */}
+                                {analyticsData?.top_partner ? "Highest Sales" : "No Sales Yet"}
                             </p>
                             <h3 className="text-xl font-extrabold text-orange-900 relative z-10 truncate">
-                                {analyticsData.top_partner?.partner_name || "N/A"}
+                                {/* 🌟 Safe Chaining Used Here */}
+                                {analyticsData?.top_partner?.partner_name || "N/A"}
                             </h3>
-                            {analyticsData.top_partner && (
+                            {analyticsData?.top_partner && (
                                 <p className="text-sm font-bold text-orange-700 mt-2 relative z-10">
                                     {formatCurrency(analyticsData.top_partner.total_sales)} ({analyticsData.top_partner.paid_orders} orders)
                                 </p>
@@ -210,10 +216,11 @@ export default function AdminPartnerAnalyticsPage() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-50">
-                                        {analyticsData.partner_sales?.length === 0 ? (
+                                        {/* 🌟 Optional Chaining on arrays as well */}
+                                        {!analyticsData?.partner_sales || analyticsData.partner_sales.length === 0 ? (
                                             <tr><td colSpan="6" className="py-8 text-center text-slate-400">No partner sales found for this period.</td></tr>
                                         ) : (
-                                            analyticsData.partner_sales?.map((partner) => (
+                                            analyticsData.partner_sales.map((partner) => (
                                                 <tr key={partner.partner_access_id} className="hover:bg-slate-50/50 transition-colors">
                                                     <td className="py-3 pl-2">
                                                         <p className="font-bold text-slate-800">{partner.partner_name}</p>
@@ -256,10 +263,11 @@ export default function AdminPartnerAnalyticsPage() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-50">
-                                        {analyticsData.buckets?.length === 0 ? (
+                                        {/* 🌟 Optional Chaining on arrays as well */}
+                                        {!analyticsData?.buckets || analyticsData.buckets.length === 0 ? (
                                             <tr><td colSpan="3" className="py-8 text-center text-slate-400">No timeline data.</td></tr>
                                         ) : (
-                                            analyticsData.buckets?.map((bucket, idx) => (
+                                            analyticsData.buckets.map((bucket, idx) => (
                                                 <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
                                                     <td className="py-3 pl-2 font-bold text-slate-700 flex items-center gap-2">
                                                         <Calendar size={14} className="text-slate-400" />

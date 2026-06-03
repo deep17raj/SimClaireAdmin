@@ -24,7 +24,7 @@ export default function AdminPartnersPage() {
           Authorization: `Bearer ${adminToken}` // 🌟 Pass the token to the backend
         }
       });
-      
+      console.log(res)
       // Axios automatically parses JSON into `res.data`
       if (res.data.status === 200) {
         setPartners(res.data.data);
