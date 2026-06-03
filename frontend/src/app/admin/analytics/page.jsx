@@ -88,7 +88,7 @@ export default function AnalyticsDashboard() {
 
     fetchAnalytics();
   }, [filter]);
-
+ 
   return (
     <div className="p-6 lg:p-10 max-w-7xl mx-auto font-sans pb-24">
 
@@ -118,7 +118,9 @@ export default function AnalyticsDashboard() {
             />
           </div>
           {/* 🌟 NEW: Company Cost Card */}
-          <div className="w-full sm:w-72">
+          <div onClick={()=>{
+            router.push("/admin/active-users")
+          }} className="w-full sm:w-72 cursor-pointer">
             <WalletCard
               title="Active Users"
               value={new Intl.NumberFormat().format(data.active_users || 0)}
