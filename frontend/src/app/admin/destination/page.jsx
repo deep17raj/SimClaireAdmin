@@ -577,7 +577,7 @@ export default function AdminPlanControlPage() {
                             <input 
                               type="number"
                               step="0.1"
-                              min="0"
+                              min="1"
                               disabled={!editState.is_active}
                               value={editState.custom_multiplier}
                               onChange={(e) => handleEdit(plan.productID, "custom_multiplier", e.target.value)}

@@ -267,7 +267,7 @@ const selectedDestination = allDestinations.find(d => d.destinationID === countr
                         <input 
                           type="number" 
                           step="0.1" 
-                          min="0.5" 
+                          min="1" 
                           max="10"
                           required={editState.is_released}
                           disabled={!editState.is_released}
