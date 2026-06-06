@@ -274,6 +274,12 @@ const selectedDestination = allDestinations.find(d => d.destinationID === countr
                           className="w-24 border border-orange-200 bg-white rounded-lg px-3 py-1.5 text-sm font-bold text-slate-800 disabled:bg-slate-100 disabled:text-slate-400 disabled:border-slate-200 focus:border-[#ec5b13] focus:ring-1 focus:ring-[#ec5b13] outline-none transition-all"
                           value={editState.partner_multiplier}
                           onChange={(e) => handleEdit(p.plan_id, "partner_multiplier", e.target.value)}
+                           onBlur={(e) => {
+    const val = parseFloat(e.target.value);
+    if (isNaN(val) || val < 1) {
+      handleEdit(p.plan_id, "partner_multiplier", 1); // Force back to 1
+    }
+  }}
                           placeholder="e.g. 1.5"
                         />
                       </td>

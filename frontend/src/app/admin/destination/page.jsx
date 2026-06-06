@@ -575,15 +575,24 @@ export default function AdminPlanControlPage() {
                           {/* Multiplier Column (Orange) */}
                           <td className="px-4 py-4 text-center bg-orange-50/30 border-r border-orange-100">
                             <input 
-                              type="number"
-                              step="0.1"
-                              min="1"
-                              disabled={!editState.is_active}
-                              value={editState.custom_multiplier}
-                              onChange={(e) => handleEdit(plan.productID, "custom_multiplier", e.target.value)}
-                              placeholder="e.g. 1.5"
-                              className="w-20 px-2 py-1.5 border border-orange-300 bg-white rounded-md text-center text-gray-900 font-bold focus:ring-2 focus:ring-orange-500 outline-none shadow-sm disabled:bg-slate-100 disabled:text-slate-400 disabled:border-slate-200 transition-all"
-                            />
+  type="number"
+  step="0.1"
+  min="1"
+  disabled={!editState.is_active}
+  value={editState.custom_multiplier}
+  onChange={(e) => handleEdit(plan.productID, "custom_multiplier", e.target.value)}
+  
+  // 🌟 ADD THIS: Validate when the user leaves the input field
+  onBlur={(e) => {
+    const val = parseFloat(e.target.value);
+    if (isNaN(val) || val < 1) {
+      handleEdit(plan.productID, "custom_multiplier", 1); // Force back to 1
+    }
+  }}
+
+  placeholder="e.g. 1.5"
+  className="w-20 px-2 py-1.5 border border-orange-300 bg-white rounded-md text-center text-gray-900 font-bold focus:ring-2 focus:ring-orange-500 outline-none shadow-sm disabled:bg-slate-100 disabled:text-slate-400 disabled:border-slate-200 transition-all"
+/>
                           </td>
 
                           {/* Calculated Delta (Purple) */}

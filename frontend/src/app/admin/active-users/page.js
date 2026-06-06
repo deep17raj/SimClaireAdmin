@@ -76,7 +76,7 @@ export default function AdminUserHistoryPage() {
             const res = await axios.get(queryUrl, {
                 headers: { Authorization: `Bearer ${adminToken}` }
             });
-            
+            console.log(res.data)
             if (res.data.success || res.data.status === 200 || res.status === 200) {
                 setAnalyticsData(res.data.data);
             } else {
