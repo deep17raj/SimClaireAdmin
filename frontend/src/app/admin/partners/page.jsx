@@ -122,7 +122,15 @@ export default function AdminPartnersPage() {
               <tr key={p.partner_access_id} className="hover:bg-slate-50">
                 <td className="p-4 text-slate-600">#{p.partner_access_id}</td>
                 <td className="p-4 font-bold text-slate-800">{p.partner_name}</td>
-                <td className="p-4 text-slate-600">{p.email}</td>
+                
+<td className="p-4">
+  <Link 
+    href={`/admin/partners/${p.partner_access_id}/customers`} 
+    className="text-brand font-semibold hover:underline transition-colors"
+  >
+    {p.email}
+  </Link>
+</td>
                 <td className="p-4">{getStatusBadge(p.status)}</td>
                 <td className="p-4 flex gap-2 justify-end">
                   <select 
