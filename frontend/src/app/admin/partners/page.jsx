@@ -4,17 +4,17 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Plus, Edit, CheckCircle, XCircle, Clock } from "lucide-react";
 import axios from "axios";
- 
+
 
 export default function AdminPartnersPage() {
   const [partners, setPartners] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  
+
   // New Partner Form State
   const [newPartner, setNewPartner] = useState({ email: "", partner_name: "", status: "PENDING" });
-    
-      const adminToken = localStorage.getItem("adminToken");
+
+  const adminToken = localStorage.getItem("adminToken");
   // 1. Fetch Partners
   // 1. Fetch Partners
   const fetchPartners = async () => {
@@ -66,17 +66,17 @@ export default function AdminPartnersPage() {
 
   // 3. Update Status
   const handleStatusChange = async (partnerId, newStatus) => {
-    if(!confirm(`Change status to ${newStatus}?`)) return;
+    if (!confirm(`Change status to ${newStatus}?`)) return;
     try {
-      const res = await axios.patch(`${process.env.NEXT_PUBLIC_API_URL}/admin/partners/${partnerId}/status`, 
-        { status: newStatus }, 
+      const res = await axios.patch(`${process.env.NEXT_PUBLIC_API_URL}/admin/partners/${partnerId}/status`,
+        { status: newStatus },
         {
           headers: {
             Authorization: `Bearer ${adminToken}` // 🌟 Pass the token to the backend
           }
         }
       );
-      
+
       if (res.data.status === 200) {
         fetchPartners(); // Refresh the list after successful update
       }
@@ -88,9 +88,9 @@ export default function AdminPartnersPage() {
 
   const getStatusBadge = (status) => {
     switch (status) {
-      case "ACTIVE": return <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 w-max"><CheckCircle size={14}/> Active</span>;
-      case "PENDING": return <span className="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 w-max"><Clock size={14}/> Pending</span>;
-      case "SUSPENDED": return <span className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 w-max"><XCircle size={14}/> Suspended</span>;
+      case "ACTIVE": return <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 w-max"><CheckCircle size={14} /> Active</span>;
+      case "PENDING": return <span className="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 w-max"><Clock size={14} /> Pending</span>;
+      case "SUSPENDED": return <span className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 w-max"><XCircle size={14} /> Suspended</span>;
       default: return null;
     }
   };
@@ -122,19 +122,19 @@ export default function AdminPartnersPage() {
               <tr key={p.partner_access_id} className="hover:bg-slate-50">
                 <td className="p-4 text-slate-600">#{p.partner_access_id}</td>
                 <td className="p-4 font-bold text-slate-800">{p.partner_name}</td>
-                
-<td className="p-4">
-  <Link 
-    href={`/admin/partners/${p.partner_access_id}/customers`} 
-    className="text-brand font-semibold hover:underline transition-colors"
-  >
-    {p.email}
-  </Link>
-</td>
+
+                <td className="p-4">
+                  <Link
+                    href={`/admin/partners/${p.partner_access_id}/customers`}
+                    className="text-brand font-semibold hover:underline transition-colors"
+                  >
+                    {p.email}
+                  </Link>
+                </td>
                 <td className="p-4">{getStatusBadge(p.status)}</td>
                 <td className="p-4 flex gap-2 justify-end">
-                  <select 
-                    value="" 
+                  <select
+                    value=""
                     onChange={(e) => handleStatusChange(p.partner_access_id, e.target.value)}
                     className="border border-slate-200 rounded px-2 py-1 text-sm bg-white text-slate-600"
                   >
@@ -143,11 +143,11 @@ export default function AdminPartnersPage() {
                     <option value="PENDING">Set Pending</option>
                     <option value="SUSPENDED">Suspend</option>
                   </select>
-                  <Link 
+                  <Link
                     href={`/admin/partners/${p.partner_access_id}`}
                     className="bg-slate-100 text-slate-700 px-3 py-1.5 rounded text-sm font-bold flex items-center gap-1 hover:bg-slate-200"
                   >
-                    <Edit size={14}/> Manage Plans
+                    <Edit size={14} /> Manage Plans
                   </Link>
                 </td>
               </tr>
@@ -164,11 +164,11 @@ export default function AdminPartnersPage() {
             <form onSubmit={handleCreatePartner} className="space-y-4">
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-1">Company / Partner Name</label>
-                <input required type="text" className="w-full border rounded-lg p-2" value={newPartner.partner_name} onChange={e => setNewPartner({...newPartner, partner_name: e.target.value})} />
+                <input required type="text" className="w-full border rounded-lg p-2" value={newPartner.partner_name} onChange={e => setNewPartner({ ...newPartner, partner_name: e.target.value })} />
               </div>
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-1">Primary Email</label>
-                <input required type="email" className="w-full border rounded-lg p-2" value={newPartner.email} onChange={e => setNewPartner({...newPartner, email: e.target.value})} />
+                <input required type="email" className="w-full border rounded-lg p-2" value={newPartner.email} onChange={e => setNewPartner({ ...newPartner, email: e.target.value })} />
               </div>
               <div className="flex justify-end gap-3 mt-6">
                 <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-slate-500 font-bold hover:bg-slate-100 rounded-lg">Cancel</button>

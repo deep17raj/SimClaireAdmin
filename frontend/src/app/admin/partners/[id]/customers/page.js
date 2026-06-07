@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import axios from "axios";
 import { 
     Search, Users, ArrowLeft, Building2, 
-    ChevronDown, ChevronUp, AlertCircle, ShoppingCart, Calendar, Phone, Mail, Smartphone
+    ChevronDown, ChevronUp, AlertCircle, ShoppingCart, Calendar, Phone, Mail, Smartphone,FileText
 } from "lucide-react";
 
 export default function AdminPartnerCustomerSearch() {
@@ -106,12 +107,23 @@ export default function AdminPartnerCustomerSearch() {
                     
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div>
-                            <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 flex items-center gap-3">
-                                <Users className="text-[#ec5b13]" size={28} /> 
-                                Customer Search
-                            </h1>
-                            <p className="text-slate-500 mt-1">Look up end-customers associated with this partner.</p>
-                        </div>
+    <div className="flex items-center gap-4 flex-wrap">
+        <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 flex items-center gap-3">
+            <Users className="text-[#ec5b13]" size={28} /> 
+            Customer Search
+        </h1>
+        
+        {/* 🌟 New Button to check profile details */}
+        <Link 
+            href={`/admin/partners/${partnerAccessId}/profile`}
+            className="inline-flex items-center gap-1.5 bg-orange-50 text-[#ec5b13] px-3 py-1.5 rounded-lg text-sm font-bold hover:bg-orange-100 transition-colors border border-orange-100 shadow-sm"
+        >
+            <FileText size={16} />
+            Check Profile Details
+        </Link>
+    </div>
+    <p className="text-slate-500 mt-1.5">Look up end-customers associated with this partner.</p>
+</div>
 
                         {/* Partner Context Badge (Appears after first search) */}
                         {partnerInfo && (
