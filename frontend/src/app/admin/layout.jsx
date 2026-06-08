@@ -44,15 +44,18 @@ export default function AdminLayout({ children }) {
     { name: "Analytics", icon: <LayoutDashboard size={20} />, path: "/admin/analytics" },
     { name: "Partner Analytics", icon: <LayoutDashboard size={20} />, path: "/admin/partner-analytics" },
     // { name: "Pricing & Types", icon: <Settings2 size={20} />, path: "/admin/pricing" },
-    { name: "Promo Codes & Offers", icon: <Tag size={20} />, path: "/admin/promocodes" },
+    
     { name: "Manage Plans", icon: <Settings2 size={20} />, path: "/admin/destination" },
+    { name: "Promo Codes & Offers", icon: <Tag size={20} />, path: "/admin/promocodes" },
     { name: "User History", icon: <Users size={20} />, path: "/admin/users" },
-    { name: "Tax Management", icon: <Landmark size={20} />, path: "/admin/tax" },
+    
+    { name: "Partners", icon: <Handshake size={20} />, path: "/admin/partners" },
+    
     { name: "Enterprise", icon: <Building2 size={20} />, path: "/admin/enterprise" },
+    { name: "Tax Management", icon: <Landmark size={20} />, path: "/admin/tax" },
     { name: "Devices", icon: <Smartphone size={20} />, path: "/admin/devices" },
     { name: "User Logs", icon: <Terminal size={20} />, path: "/admin/logs" },
     { name: "Api Docs", icon: <FileCode size={20} />, path: "/admin/api-docs" },
-    { name: "Partners", icon: <Handshake size={20} />, path: "/admin/partners" },
   ];
 
   const handleNavClick = () => setIsMobileMenuOpen(false);
