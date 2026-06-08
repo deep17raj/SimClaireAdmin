@@ -5,7 +5,7 @@ import axios from "axios";
 import { 
     TrendingUp, Users, ShoppingCart, DollarSign, 
     Filter, Calendar, Trophy, Building2, Activity,
-    CheckCircle2, AlertCircle
+    CheckCircle2, AlertCircle,Search
 } from "lucide-react";
 
 export default function AdminPartnerAnalyticsPage() {
@@ -19,10 +19,21 @@ export default function AdminPartnerAnalyticsPage() {
         const d = new Date();
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     });
+// Add this state
+const [partnerSearchQuery, setPartnerSearchQuery] = useState("");
 
+// Add this filtering logic
+const filteredPartnerSales = analyticsData?.partner_sales?.filter(partner => {
+    if (!partnerSearchQuery) return true;
+    const query = partnerSearchQuery.toLowerCase();
+    return (
+        partner.partner_name?.toLowerCase().includes(query) ||
+        partner.email?.toLowerCase().includes(query)
+    );
+}) || [];
     // --- Formatters ---
     const formatCurrency = (amount) => {
-        return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount || 0);
+        return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'CAD' }).format(amount || 0);
     };
 
     const formatDate = (dateString) => {
@@ -198,53 +209,69 @@ export default function AdminPartnerAnalyticsPage() {
                         
                         {/* LEFT: PARTNER LEADERBOARD */}
                         <div className="xl:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
-                            <div className="p-5 border-b border-slate-100 bg-slate-50/50">
-                                <h3 className="font-bold text-slate-900 flex items-center gap-2">
-                                    <Building2 className="text-brand" size={18} /> Partner Sales Breakdown
-                                </h3>
-                            </div>
-                            <div className="overflow-x-auto p-4">
-                                <table className="w-full text-left border-collapse whitespace-nowrap">
-                                    <thead className="text-xs uppercase text-slate-400 font-bold border-b border-slate-100">
-                                        <tr>
-                                            <th className="pb-3 pl-2">Partner</th>
-                                            <th className="pb-3">Status</th>
-                                            <th className="pb-3 text-center">Customers</th>
-                                            <th className="pb-3 text-center">Paid Orders</th>
-                                            <th className="pb-3 text-right">Total Revenue</th>
-                                            <th className="pb-3 text-right pr-2">Last Order</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-50">
-                                        {/* 🌟 Optional Chaining on arrays as well */}
-                                        {!analyticsData?.partner_sales || analyticsData.partner_sales.length === 0 ? (
-                                            <tr><td colSpan="6" className="py-8 text-center text-slate-400">No partner sales found for this period.</td></tr>
-                                        ) : (
-                                            analyticsData.partner_sales.map((partner) => (
-                                                <tr key={partner.partner_access_id} className="hover:bg-slate-50/50 transition-colors">
-                                                    <td className="py-3 pl-2">
-                                                        <p className="font-bold text-slate-800">{partner.partner_name}</p>
-                                                        <p className="text-xs text-slate-500">{partner.email}</p>
-                                                    </td>
-                                                    <td className="py-3">{getStatusBadge(partner.status)}</td>
-                                                    <td className="py-3 text-center font-semibold text-slate-600">{partner.total_customers}</td>
-                                                    <td className="py-3 text-center">
-                                                        <span className="font-bold text-slate-800">{partner.paid_orders}</span>
-                                                        <span className="text-xs text-slate-400 ml-1">/ {partner.total_orders}</span>
-                                                    </td>
-                                                    <td className="py-3 text-right font-extrabold text-green-600">
-                                                        {formatCurrency(partner.total_sales)}
-                                                    </td>
-                                                    <td className="py-3 text-right pr-2 text-xs text-slate-500 font-medium">
-                                                        {formatDate(partner.last_order_at)}
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
+    <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <h3 className="font-bold text-slate-900 flex items-center gap-2">
+            <Building2 className="text-brand" size={18} /> Partner Sales Breakdown
+        </h3>
+        
+        {/* Search Bar UI */}
+        <div className="relative w-full sm:w-72">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+            <input 
+                type="text" 
+                placeholder="Search by name or email..." 
+                value={partnerSearchQuery}
+                onChange={(e) => setPartnerSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all shadow-sm"
+            />
+        </div>
+    </div>
+    
+    <div className="overflow-x-auto p-4">
+        <table className="w-full text-left border-collapse whitespace-nowrap">
+            <thead className="text-xs uppercase text-slate-400 font-bold border-b border-slate-100">
+                <tr>
+                    <th className="pb-3 pl-2">Partner</th>
+                    <th className="pb-3">Status</th>
+                    <th className="pb-3 text-center">Customers</th>
+                    <th className="pb-3 text-center">Paid Orders</th>
+                    <th className="pb-3 text-right">Total Revenue</th>
+                    <th className="pb-3 text-right pr-2">Last Order</th>
+                </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+                {filteredPartnerSales.length === 0 ? (
+                    <tr>
+                        <td colSpan="6" className="py-8 text-center text-slate-400">
+                            {partnerSearchQuery ? "No partners match your search." : "No partner sales found for this period."}
+                        </td>
+                    </tr>
+                ) : (
+                    filteredPartnerSales.map((partner) => (
+                        <tr key={partner.partner_access_id} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="py-3 pl-2">
+                                <p className="font-bold text-slate-800">{partner.partner_name}</p>
+                                <p className="text-xs text-slate-500">{partner.email}</p>
+                            </td>
+                            <td className="py-3">{getStatusBadge(partner.status)}</td>
+                            <td className="py-3 text-center font-semibold text-slate-600">{partner.total_customers}</td>
+                            <td className="py-3 text-center">
+                                <span className="font-bold text-slate-800">{partner.paid_orders}</span>
+                                <span className="text-xs text-slate-400 ml-1">/ {partner.total_orders}</span>
+                            </td>
+                            <td className="py-3 text-right font-extrabold text-green-600">
+                                {formatCurrency(partner.total_sales)}
+                            </td>
+                            <td className="py-3 text-right pr-2 text-xs text-slate-500 font-medium">
+                                {formatDate(partner.last_order_at)}
+                            </td>
+                        </tr>
+                    ))
+                )}
+            </tbody>
+        </table>
+    </div>
+</div>
 
                         {/* RIGHT: TIMELINE / BUCKETS */}
                         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
