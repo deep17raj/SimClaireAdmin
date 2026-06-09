@@ -51,7 +51,7 @@ export default function AdminLayout({ children }) {
     
     { name: "Partners", icon: <Handshake size={20} />, path: "/admin/partners" },
     
-    { name: "Enterprise", icon: <Building2 size={20} />, path: "/admin/enterprise" },
+    { name: "Enterprise", icon: <Building2 size={20} />, path: "/admin/enterprise" }, 
     { name: "Tax Management", icon: <Landmark size={20} />, path: "/admin/tax" },
     { name: "Devices", icon: <Smartphone size={20} />, path: "/admin/devices" },
     { name: "User Logs", icon: <Terminal size={20} />, path: "/admin/logs" },
