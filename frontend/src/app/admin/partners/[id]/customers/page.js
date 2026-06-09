@@ -5,8 +5,9 @@ import { useParams, useRouter } from "next/navigation";
 import axios from "axios";
 import { 
     Search, Users, ArrowLeft, Building2, 
-    ChevronDown, ChevronUp, AlertCircle, ShoppingCart, 
-    Calendar, Phone, Mail, Smartphone, Download, CheckCircle2, XCircle, Clock, Edit2, CreditCard, Tag
+    ChevronDown, ChevronUp, AlertCircle, Calendar, Phone, Mail, 
+    Download, CheckCircle2, XCircle, Clock, Edit2, Globe, Database, 
+    CreditCard, Tag, Activity, FileText, Check, Copy
 } from "lucide-react";
 import { jsPDF } from "jspdf";
 import QRCodeUtil from "qrcode";
@@ -43,7 +44,11 @@ export default function AdminPartnerCustomerSearch() {
     
     // UI States
     const [expandedCustomerId, setExpandedCustomerId] = useState(null);
-    const [isDownloading, setIsDownloading] = useState(null); // Track downloading order_id
+    const [isDownloading, setIsDownloading] = useState(null); 
+    
+    // Modal States
+    const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
+    const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
 
     // Edit Failed Order States
     const [editingOrder, setEditingOrder] = useState(null);
@@ -65,34 +70,32 @@ export default function AdminPartnerCustomerSearch() {
         return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount || 0);
     };
 
-    const getStatusBadge = (status) => {
-        if (!status) return <span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-[10px] font-bold">N/A</span>;
-        const s = status.toUpperCase();
-        if (s === "ACTIVE" || s === "PAID" || s === "COMPLETED" || s === "SUCCESS") return <span className="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wider flex items-center gap-1 w-max"><CheckCircle2 size={12}/>{s}</span>;
-        if (s === "SUSPENDED" || s === "FAILED" || s === "ERROR") return <span className="bg-rose-100 text-rose-700 px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wider flex items-center gap-1 w-max"><XCircle size={12}/>{s}</span>;
-        if (s === "INITIATED" || s === "PENDING") return <span className="bg-amber-100 text-amber-700 px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wider flex items-center gap-1 w-max"><Clock size={12}/>{s}</span>;
-        return <span className="bg-slate-100 text-slate-700 px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wider">{s}</span>;
+    const getStatusColor = (status) => {
+        const s = (status || "").toUpperCase();
+        if (["ACTIVE", "PAID", "COMPLETED", "SUCCEEDED", "SUCCESS", "PURCHASED"].includes(s)) return "text-emerald-700 bg-emerald-50 border-emerald-200";
+        if (["SUSPENDED", "FAILED", "ERROR"].includes(s)) return "text-rose-700 bg-rose-50 border-rose-200";
+        if (["INITIATED", "PENDING", "PROVISIONING"].includes(s)) return "text-amber-700 bg-amber-50 border-amber-200";
+        return "text-slate-700 bg-slate-50 border-slate-200";
     };
+
+    const StatusPill = ({ label, value }) => (
+        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-bold tracking-wider border uppercase ${getStatusColor(value)}`}>
+            {["FAILED", "ERROR"].includes((value||"").toUpperCase()) ? <XCircle size={12}/> : <CheckCircle2 size={12}/>}
+            {label}: {value || "N/A"}
+        </span>
+    );
 
     // --- API Fetchers ---
     const handleSearch = async (e) => {
         if (e && e.preventDefault) e.preventDefault();
-        
-        if (!searchQuery.trim()) {
-            setError("Please enter a name, email, or phone number to search.");
-            return;
-        }
+        if (!searchQuery.trim()) { setError("Please enter a search query."); return; }
 
-        setLoading(true);
-        setError("");
+        setLoading(true); setError(""); 
         if (!editingOrder) setExpandedCustomerId(null); 
 
         try {
             const adminToken = localStorage.getItem("adminToken");
-            if (!adminToken) {
-                router.push("/admin/login");
-                return;
-            }
+            if (!adminToken) { router.push("/admin/login"); return; }
 
             const res = await axios.get(
                 `${process.env.NEXT_PUBLIC_API_URL}/admin/partners/${partnerAccessId}/customers/search?q=${encodeURIComponent(searchQuery)}`, 
@@ -100,6 +103,7 @@ export default function AdminPartnerCustomerSearch() {
             );
             
             if (res.data.status === 200 || res.status === 200 || res.data.success) {
+                console.log(res.data.data)
                 setResults(res.data.data.results || []);
                 setPartnerInfo(res.data.data.partner || null);
                 setHasSearched(true);
@@ -115,6 +119,11 @@ export default function AdminPartnerCustomerSearch() {
         setExpandedCustomerId(expandedCustomerId === customerId ? null : customerId);
     };
 
+    const openOrderDetails = (order) => {
+        setSelectedOrderDetails(order);
+        setIsOrderModalOpen(true);
+    };
+
     // --- Edit Failed Order Handlers ---
     const openEditModal = (order) => {
         setEditingOrder(order);
@@ -124,16 +133,13 @@ export default function AdminPartnerCustomerSearch() {
             msisdn: order.msisdn || "",
             provider_purchase_id: order.provider_purchase_id || "",
             provider_reference: order.provider_reference || "",
-            provider_amount: "",
-            provider_currency: "USD",
-            provider_txn_time: new Date().toISOString().slice(0, 16),
-            notes: ""
+            provider_amount: "", provider_currency: "USD",
+            provider_txn_time: new Date().toISOString().slice(0, 16), notes: ""
         });
     };
 
     const handleUpdateFailedOrder = async (e) => {
         e.preventDefault();
-        
         const enteredPassword = window.prompt("Enter admin PIN to update the order. This cannot be undone:");
         if (enteredPassword !== process.env.NEXT_PUBLIC_ADMIN_PIN) {
             alert("Incorrect PIN. Order update aborted.");
@@ -143,13 +149,9 @@ export default function AdminPartnerCustomerSearch() {
         setIsSubmittingEdit(true);
         const payload = {
             order_id: editingOrder.order_id,
-            lpa: editFormData.lpa,
-            iccid: editFormData.iccid,
-            msisdn: editFormData.msisdn || null,
-            provider_purchase_id: editFormData.provider_purchase_id,
-            provider_reference: editFormData.provider_reference,
-            provider_amount: parseFloat(editFormData.provider_amount),
-            provider_currency: editFormData.provider_currency,
+            lpa: editFormData.lpa, iccid: editFormData.iccid, msisdn: editFormData.msisdn || null,
+            provider_purchase_id: editFormData.provider_purchase_id, provider_reference: editFormData.provider_reference,
+            provider_amount: parseFloat(editFormData.provider_amount), provider_currency: editFormData.provider_currency,
             provider_txn_time: editFormData.provider_txn_time ? new Date(editFormData.provider_txn_time).toISOString() : new Date().toISOString(),
             notes: editFormData.notes
         };
@@ -162,12 +164,10 @@ export default function AdminPartnerCustomerSearch() {
 
             alert("Order updated successfully!");
             setEditingOrder(null);
-            
-            // Silent refresh to show updated data
-            handleSearch({ preventDefault: () => {} }); 
+            setIsOrderModalOpen(false); // Close detailed modal if open
+            handleSearch({ preventDefault: () => {} }); // Refresh
         } catch (error) {
-            console.error("Update failed:", error);
-            alert(error.response?.data?.message || "Failed to update order. Check server logs.");
+            alert(error.response?.data?.message || "Failed to update order.");
         } finally {
             setIsSubmittingEdit(false);
         }
@@ -186,14 +186,11 @@ export default function AdminPartnerCustomerSearch() {
             // Header
             doc.setFillColor(7, 119, 112); 
             doc.rect(0, 0, 210, 40, 'F');
-            doc.setFont("helvetica", "bolditalic");
-            doc.setFontSize(28);
+            doc.setFont("helvetica", "bolditalic"); doc.setFontSize(28);
             const simWidth = doc.getTextWidth("SiM");
-            doc.setFont("helvetica", "normal"); 
-            doc.setFont("helvetica", "italic");
+            doc.setFont("helvetica", "normal"); doc.setFont("helvetica", "italic");
             const claireWidth = doc.getTextWidth("Claire");
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(10);
+            doc.setFont("helvetica", "bold"); doc.setFontSize(10);
             const tmWidth = doc.getTextWidth("TM");
 
             const logoW = 16, logoH = 16, gap = -2, space1 = 1.5, space2 = 0.5;
@@ -252,30 +249,19 @@ export default function AdminPartnerCustomerSearch() {
             doc.setFontSize(10); doc.setTextColor(100, 116, 139); doc.text("ICCID:", 25, 158);
             doc.setTextColor(15, 23, 42); doc.text(order.iccid || "Pending...", 25, 163);
 
-            doc.setTextColor(100, 116, 139); doc.text("MSISDN (Phone Number):", 25, 173);
-            doc.setTextColor(15, 23, 42); doc.text(order.msisdn || "N/A", 25, 178);
-
-            doc.setTextColor(100, 116, 139); doc.text("Activation Code (LPA):", 25, 188);
-            doc.setTextColor(15, 23, 42); doc.text(order.activation_code || "N/A", 25, 193, { maxWidth: 100 }); 
+            doc.setTextColor(100, 116, 139); doc.text("Activation Code (LPA):", 25, 173);
+            doc.setTextColor(15, 23, 42); doc.text(order.activation_code || "N/A", 25, 178, { maxWidth: 100 }); 
 
             // Guidelines
             doc.setDrawColor(255, 237, 213); doc.setFillColor(255, 247, 237); 
-            doc.roundedRect(20, 220, 170, 42, 3, 3, 'FD');
-            doc.setFontSize(9); doc.setTextColor(234, 88, 12); doc.text("INSTALLATION GUIDELINES", 25, 230);
+            doc.roundedRect(20, 230, 170, 42, 3, 3, 'FD');
+            doc.setFontSize(9); doc.setTextColor(234, 88, 12); doc.text("INSTALLATION GUIDELINES", 25, 240);
             doc.setFontSize(10); doc.setTextColor(120, 53, 15); 
-            doc.text("• Secure a stable Wi-Fi connection prior to attempting installation.", 25, 240);
-            doc.text("• Go to your device Settings > Cellular/Mobile Data > Add eSIM.", 25, 247);
-            doc.text("• Scan the QR code above and follow the on-screen prompts.", 25, 254);
-
-            // Footer
-            doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.setTextColor(100, 116, 139); 
-            doc.text("Need help? Reach our support concierge:", 105, 272, { align: "center" });
-            doc.setFontSize(11); doc.setTextColor(7, 119, 112); doc.text("care@simclaire.com   |   +1 (437) 605-6560", 105, 279, { align: "center" });
-            doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(148, 163, 184); 
-            doc.text("© 2026 SiM Claire. All rights reserved.", 105, 289, { align: "center" });
+            doc.text("• Secure a stable Wi-Fi connection prior to attempting installation.", 25, 250);
+            doc.text("• Go to your device Settings > Cellular/Mobile Data > Add eSIM.", 25, 257);
+            doc.text("• Scan the QR code above and follow the on-screen prompts.", 25, 264);
 
             doc.save(`SiM_Claire_${order.country_code || "eSIM"}_${order.order_id || "Receipt"}.pdf`);
-            
         } catch (err) {
             console.error("Failed to generate PDF", err);
             alert("Failed to generate your PDF. Please ensure the activation code is valid.");
@@ -303,7 +289,7 @@ export default function AdminPartnerCustomerSearch() {
                         </div>
 
                         {partnerInfo && (
-                            <div className="bg-white border border-slate-200 shadow-sm p-3 rounded-xl flex items-center gap-3 animate-in fade-in">
+                            <div className="bg-white border border-slate-200 shadow-sm p-3 rounded-xl flex items-center gap-3">
                                 <div className="w-10 h-10 bg-orange-50 rounded-full flex items-center justify-center text-[#ec5b13] shrink-0">
                                     <Building2 size={18} />
                                 </div>
@@ -311,7 +297,7 @@ export default function AdminPartnerCustomerSearch() {
                                     <p className="text-xs font-bold text-slate-400 uppercase">Partner Context</p>
                                     <div className="flex items-center gap-2">
                                         <p className="font-extrabold text-slate-800">{partnerInfo.partner_name}</p>
-                                        {getStatusBadge(partnerInfo.status)}
+                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${getStatusColor(partnerInfo.status)}`}>{partnerInfo.status}</span>
                                     </div>
                                 </div>
                             </div>
@@ -333,12 +319,7 @@ export default function AdminPartnerCustomerSearch() {
                             {loading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : "Search Customers"}
                         </button>
                     </form>
-                    
-                    {error && (
-                        <div className="mt-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-center gap-2 border border-red-100 animate-in fade-in">
-                            <AlertCircle size={16} className="shrink-0" /> {error}
-                        </div>
-                    )}
+                    {error && <div className="mt-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-center gap-2 border border-red-100"><AlertCircle size={16} className="shrink-0" /> {error}</div>}
                 </div>
 
                 {/* --- RESULTS AREA --- */}
@@ -384,7 +365,7 @@ export default function AdminPartnerCustomerSearch() {
                                                                 </div>
                                                                 <div>
                                                                     <p className="font-extrabold text-slate-900">{cust.full_name}</p>
-                                                                    <p className="text-xs text-slate-400 font-mono">ID: {cust.id}</p>
+                                                                    <p className="text-xs text-slate-400 font-mono mt-0.5">ID: {cust.id}</p>
                                                                 </div>
                                                             </div>
                                                         </td>
@@ -394,8 +375,8 @@ export default function AdminPartnerCustomerSearch() {
                                                                 <div className="flex items-center gap-2"><Phone size={14} className="text-slate-400"/> {cust.phone || "N/A"}</div>
                                                             </div>
                                                         </td>
-                                                        <td className="p-4 text-slate-600 text-sm font-medium flex items-center gap-2 mt-2">
-                                                            <Calendar size={14} className="text-slate-400" /> {formatDate(cust.created_at)}
+                                                        <td className="p-4 text-slate-600 text-sm font-medium">
+                                                            <span className="flex items-center gap-2"><Calendar size={14} className="text-slate-400" /> {formatDate(cust.created_at)}</span>
                                                         </td>
                                                         <td className="p-4 text-center">
                                                             <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-slate-100 text-slate-700 font-bold text-sm">{orders.length}</span>
@@ -411,123 +392,92 @@ export default function AdminPartnerCustomerSearch() {
                                                         </td>
                                                     </tr>
 
-                                                    {/* EXPANDED ORDERS CARDS */}
+                                                    {/* HORIZONTAL ORDER CARDS */}
                                                     {isExpanded && (
                                                         <tr>
                                                             <td colSpan="5" className="p-0 border-b border-slate-100 bg-slate-50/80">
                                                                 <div className="px-6 py-8 pl-6 md:pl-20 animate-in slide-in-from-top-2 duration-200">
-                                                                    
-                                                                    <h4 className="text-sm font-extrabold text-slate-800 uppercase tracking-wider mb-4 flex items-center gap-2">
-                                                                        <ShoppingCart size={16} className="text-[#ec5b13]"/> Order History & Provisioning
-                                                                    </h4>
-                                                                    
                                                                     {orders.length === 0 ? (
-                                                                        <p className="text-sm text-slate-500 italic">No orders found for this customer.</p>
+                                                                        <p className="text-sm text-slate-500 italic">No orders found.</p>
                                                                     ) : (
-                                                                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                                                                            {orders.map(order => {
-                                                                                const isFailed = order.provisioning_status === "FAILED" || order.provisioning_status === "ERROR";
-                                                                                const canDownload = !!order.activation_code;
-
-                                                                                return (
-                                                                                <div key={order.order_id} className="bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow flex flex-col">
-                                                                                    
-                                                                                    {/* Card Header */}
-                                                                                    <div className="p-5 border-b border-slate-100 flex flex-wrap justify-between items-start gap-4">
-                                                                                        <div>
-                                                                                            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Order #{order.order_id}</p>
-                                                                                            <p className="font-extrabold text-slate-900 text-2xl">{formatCurrency(order.final_price, order.currency)}</p>
-                                                                                        </div>
-                                                                                        <div className="flex flex-col items-end gap-2">
-                                                                                            {getStatusBadge(order.order_status)}
-                                                                                            <span className="text-xs text-slate-500 font-medium flex items-center gap-1.5">
-                                                                                                <Calendar size={12}/> {formatDate(order.created_at)}
-                                                                                            </span>
-                                                                                        </div>
-                                                                                    </div>
-
-                                                                                    {/* Order Data Grid */}
-                                                                                    <div className="p-5 grid grid-cols-2 sm:grid-cols-4 gap-y-5 gap-x-4 text-sm flex-1">
-                                                                                        <div className="sm:col-span-2 border-r border-slate-100 pr-2">
-                                                                                            <p className="text-xs font-semibold text-slate-400 mb-0.5">Package (SIM ID)</p>
-                                                                                            <p className="font-bold text-slate-800">{order.sim_id} <span className="text-[10px] font-bold text-orange-600 bg-orange-50 border border-orange-100 px-1.5 py-0.5 rounded ml-1 align-middle">Type {order.sim_type}</span></p>
-                                                                                        </div>
-                                                                                        <div className="sm:col-span-2">
-                                                                                            <p className="text-xs font-semibold text-slate-400 mb-0.5">Destination</p>
-                                                                                            <p className="font-bold text-slate-800">{order.country_code || order.purchasedforCountry}</p>
-                                                                                        </div>
-                                                                                        
-                                                                                        <div className="sm:col-span-2 border-r border-slate-100 pr-2">
-                                                                                            <p className="text-xs font-semibold text-slate-400 mb-0.5">Payment Details</p>
-                                                                                            <p className="font-semibold text-slate-700 flex items-center gap-1">
-                                                                                                <CreditCard size={14}/> {order.payment_status || "N/A"}
-                                                                                            </p>
-                                                                                            <p className="text-[10px] text-slate-400 font-mono mt-0.5" title="Stripe Intent ID">{order.stripe_payment_intent_id}</p>
-                                                                                        </div>
-                                                                                        <div className="sm:col-span-2">
-                                                                                            <p className="text-xs font-semibold text-slate-400 mb-0.5">Discounts & Promo</p>
-                                                                                            {order.promo_code ? (
-                                                                                                <p className="font-semibold text-emerald-600 flex items-center gap-1">
-                                                                                                    <Tag size={14}/> {order.promo_code} (-{formatCurrency(order.discount_value, order.currency)})
+                                                                        <div className="flex flex-col gap-4">
+                                                                            {orders.map(order => (
+                                                                                <div 
+                                                                                    key={order.order_id} 
+                                                                                    onClick={() => openOrderDetails(order)}
+                                                                                    className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:border-[#ec5b13] hover:shadow-md transition-all cursor-pointer relative group"
+                                                                                >
+                                                                                    {/* Row 1: Header */}
+                                                                                    <div className="flex flex-wrap justify-between items-start gap-4 mb-4 pb-4 border-b border-slate-100">
+                                                                                        <div className="flex items-center gap-4">
+                                                                                            <div className="w-12 h-12 bg-slate-50 border border-slate-100 rounded-full flex items-center justify-center shrink-0">
+                                                                                                <Globe size={24} className="text-[#077770]" />
+                                                                                            </div>
+                                                                                            <div>
+                                                                                                <h4 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
+                                                                                                    {order.country_code || order.purchasedforCountry} 
+                                                                                                    <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded font-bold tracking-wider">TYPE {order.sim_type}</span>
+                                                                                                </h4>
+                                                                                                <p className="text-xs text-slate-500 font-medium flex items-center gap-1.5 mt-1">
+                                                                                                    <Calendar size={12}/> {formatDate(order.created_at)}
                                                                                                 </p>
-                                                                                            ) : <p className="font-medium text-slate-400 italic">No Promo Code</p>}
+                                                                                            </div>
+                                                                                        </div>
+                                                                                        <div className="flex flex-wrap items-center gap-2">
+                                                                                            <StatusPill label="ORDER" value={order.order_status} />
+                                                                                            <StatusPill label="PAYMENT" value={order.payment_status} />
+                                                                                            <StatusPill label="API STATUS" value={order.provisioning_status} />
                                                                                         </div>
                                                                                     </div>
 
-                                                                                    {/* Provisioning Box */}
-                                                                                    <div className="m-5 mt-0 bg-slate-50/80 rounded-xl p-4 border border-slate-200/60">
-                                                                                        <div className="flex flex-wrap justify-between items-center gap-2 mb-3 pb-3 border-b border-slate-200/60">
-                                                                                            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                                                                                                <Smartphone size={14} className="text-[#ec5b13]"/> Provisioning Data
+                                                                                    {/* Row 2: Data Split */}
+                                                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                                                        {/* Technical */}
+                                                                                        <div>
+                                                                                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 mb-3">
+                                                                                                <Database size={14}/> Technical Details
                                                                                             </p>
-                                                                                            <div className="flex items-center gap-2">
-                                                                                                {getStatusBadge(order.provisioning_status)}
-                                                                                                
-                                                                                                {/* ACTION BUTTONS */}
-                                                                                                {isFailed && (
-                                                                                                    <button onClick={() => openEditModal(order)} className="p-1.5 bg-white border border-rose-200 text-rose-600 rounded-md hover:bg-rose-50 transition-colors shadow-sm" title="Manually Provision">
-                                                                                                        <Edit2 size={14}/>
-                                                                                                    </button>
-                                                                                                )}
-                                                                                                {canDownload && (
-                                                                                                    <button 
-                                                                                                        onClick={() => handleDownloadPDF(order)} 
-                                                                                                        disabled={isDownloading === order.order_id}
-                                                                                                        className="flex items-center gap-1.5 px-2.5 py-1 bg-white border border-slate-200 text-slate-700 rounded-md hover:bg-slate-50 disabled:opacity-50 transition-colors shadow-sm text-xs font-bold"
-                                                                                                    >
-                                                                                                        {isDownloading === order.order_id ? <div className="w-3 h-3 border-2 border-slate-400 border-t-transparent rounded-full animate-spin"></div> : <Download size={12}/>}
-                                                                                                        PDF
-                                                                                                    </button>
-                                                                                                )}
+                                                                                            <div className="grid grid-cols-2 gap-4 text-sm mb-4">
+                                                                                                <div>
+                                                                                                    <p className="text-slate-500 mb-1">Order ID</p>
+                                                                                                    <p className="font-bold text-slate-800">#{order.order_id}</p>
+                                                                                                </div>
+                                                                                                <div>
+                                                                                                    <p className="text-slate-500 mb-1">Payment ID</p>
+                                                                                                    <p className="font-bold text-slate-800">#{order.payment_id}</p>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                            <div>
+                                                                                                <p className="text-slate-500 text-sm mb-1">ICCID</p>
+                                                                                                <div className="bg-slate-50 border border-slate-100 rounded-lg p-2 font-mono text-sm text-slate-700 w-max max-w-full truncate">
+                                                                                                    {order.iccid || "Pending Initialization..."}
+                                                                                                </div>
                                                                                             </div>
                                                                                         </div>
-                                                                                        
-                                                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm mb-3">
-                                                                                            <div className="sm:col-span-2">
-                                                                                                <p className="text-slate-400 text-xs font-semibold mb-0.5">Provider Status Msg</p>
-                                                                                                <p className={`font-medium text-xs ${isFailed ? 'text-rose-600' : 'text-slate-700'}`}>{order.provider_status_msg || "N/A"}</p>
-                                                                                            </div>
-                                                                                            <div>
-                                                                                                <p className="text-slate-400 text-xs font-semibold mb-0.5">Provider Purchase ID</p>
-                                                                                                <p className="font-mono text-xs font-medium text-slate-800 bg-white border border-slate-200 px-2 py-1.5 rounded truncate" title={order.provider_purchase_id}>{order.provider_purchase_id || "N/A"}</p>
-                                                                                            </div>
-                                                                                            <div>
-                                                                                                <p className="text-slate-400 text-xs font-semibold mb-0.5">Provider Reference</p>
-                                                                                                <p className="font-mono text-xs font-medium text-slate-800 bg-white border border-slate-200 px-2 py-1.5 rounded truncate" title={order.provider_reference}>{order.provider_reference || "N/A"}</p>
-                                                                                            </div>
-                                                                                            <div>
-                                                                                                <p className="text-slate-400 text-xs font-semibold mb-0.5">ICCID</p>
-                                                                                                <p className="font-mono text-xs font-medium text-slate-800 bg-white border border-slate-200 px-2 py-1.5 rounded truncate" title={order.iccid}>{order.iccid || "Pending"}</p>
-                                                                                            </div>
-                                                                                            <div>
-                                                                                                <p className="text-slate-400 text-xs font-semibold mb-0.5">Activation Code (LPA)</p>
-                                                                                                <p className="font-mono text-xs font-medium text-slate-800 bg-white border border-slate-200 px-2 py-1.5 rounded truncate" title={order.activation_code}>{order.activation_code || "Pending"}</p>
+
+                                                                                        {/* Financial */}
+                                                                                        <div>
+                                                                                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 mb-3">
+                                                                                                <CreditCard size={14}/> Financial Breakdown
+                                                                                            </p>
+                                                                                            <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 space-y-3">
+                                                                                                <div className="flex justify-between items-center text-sm">
+                                                                                                    <span className="text-slate-500 flex items-center gap-1.5"><Database size={14} className="text-slate-400"/> API Cost (Base)</span>
+                                                                                                    <span className="font-bold text-slate-700">{order.currency} {order.base_price}</span>
+                                                                                                </div>
+                                                                                                <div className="flex justify-between items-center text-sm border-t border-slate-200/60 pt-3">
+                                                                                                    <span className="text-slate-700 font-semibold flex items-center gap-1.5"><Tag size={14} className="text-[#077770]"/> Billed to User</span>
+                                                                                                    <span className="font-extrabold text-[#077770]">{order.currency} {order.final_price}</span>
+                                                                                                </div>
+                                                                                                <div className="flex justify-between items-center text-sm border-t border-slate-200/60 pt-3">
+                                                                                                    <span className="text-slate-700 font-semibold flex items-center gap-1.5"><CreditCard size={14} className="text-emerald-600"/> Actual Amount Paid</span>
+                                                                                                    <span className="font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">{order.payment_currency} {order.payment_amount}</span>
+                                                                                                </div>
                                                                                             </div>
                                                                                         </div>
                                                                                     </div>
-
                                                                                 </div>
-                                                                            )})}
+                                                                            ))}
                                                                         </div>
                                                                     )}
                                                                 </div>
@@ -545,9 +495,191 @@ export default function AdminPartnerCustomerSearch() {
                 )}
             </div>
 
-            {/* --- MANUAL PROVISIONING EDIT MODAL --- */}
+            {/* ======================================================== */}
+            {/* ESIM RECORD MODAL (Image 2 Match) */}
+            {/* ======================================================== */}
+            {isOrderModalOpen && selectedOrderDetails && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-2xl w-full max-w-4xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
+                        
+                        {/* Header */}
+                        <div className="p-6 bg-white border-b border-slate-100 flex flex-wrap justify-between items-center gap-4 shrink-0">
+                            <div>
+                                <h2 className="text-2xl font-extrabold text-slate-900">eSIM Record</h2>
+                                <p className="text-xs text-slate-500 mt-1 font-mono">
+                                    History ID: <span className="bg-slate-100 px-1.5 py-0.5 rounded">#{selectedOrderDetails.esim_history_id}</span> | 
+                                    User ID: <span className="bg-slate-100 px-1.5 py-0.5 rounded ml-1">#{selectedOrderDetails.partner_customer_id}</span>
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <button 
+                                    onClick={() => { setIsOrderModalOpen(false); openEditModal(selectedOrderDetails); }}
+                                    className="px-4 py-2 bg-orange-50 text-[#ec5b13] border border-orange-200 rounded-lg text-sm font-bold hover:bg-orange-100 transition-colors flex items-center gap-2 shadow-sm"
+                                >
+                                    <Edit2 size={16}/> Edit Fulfillment
+                                </button>
+                                {selectedOrderDetails.activation_code && (
+                                    <button 
+                                        onClick={() => handleDownloadPDF(selectedOrderDetails)}
+                                        disabled={isDownloading === selectedOrderDetails.order_id}
+                                        className="px-4 py-2 bg-[#077770] text-white rounded-lg text-sm font-bold hover:bg-[#065f59] transition-colors flex items-center gap-2 shadow-sm disabled:opacity-50"
+                                    >
+                                        {isDownloading === selectedOrderDetails.order_id ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <FileText size={16}/>}
+                                        Download PDF
+                                    </button>
+                                )}
+                                <button onClick={() => setIsOrderModalOpen(false)} className="text-slate-400 hover:text-slate-700 bg-slate-50 p-2 rounded-full border border-slate-200 transition-colors ml-2">
+                                    <XCircle size={20} />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Modal Body */}
+                        <div className="p-6 overflow-y-auto custom-scrollbar flex-1 bg-[#fafafa] space-y-6">
+                            
+                            {/* API Status Description */}
+                            <div className="text-center pb-4 border-b border-slate-200/60">
+                                <p className="text-sm font-bold text-slate-800">
+                                    Api Status Description: <span className="font-normal text-slate-600 ml-2">{selectedOrderDetails.provider_status_msg || "N/A"}</span>
+                                </p>
+                            </div>
+
+                            {/* SECTION: NETWORK DETAILS */}
+                            <div>
+                                <h3 className="flex items-center gap-2 text-[#077770] font-bold text-sm uppercase tracking-wider mb-4 border-b-2 border-[#077770]/20 pb-2">
+                                    <Globe size={16}/> Network Details
+                                </h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                    <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">ICCID</p>
+                                        <p className="font-extrabold text-slate-800 break-all">{selectedOrderDetails.iccid || "N/A"}</p>
+                                    </div>
+                                    <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Activation Code (LPA)</p>
+                                        <p className="font-extrabold text-slate-800 break-all">{selectedOrderDetails.activation_code || "N/A"}</p>
+                                    </div>
+                                </div>
+                                <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm grid grid-cols-3 gap-4">
+                                    <div>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">SKU</p>
+                                        <p className="font-extrabold text-slate-800">{selectedOrderDetails.sim_id}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Product Type</p>
+                                        <p className="font-extrabold text-slate-800">{selectedOrderDetails.sim_type}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Quantity</p>
+                                        <p className="font-extrabold text-slate-800">1</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* SECTION: PROVIDER LOGS */}
+                            <div className="bg-[#f0f9f8] border border-[#077770]/20 rounded-xl p-5 shadow-sm">
+                                <h3 className="flex items-center gap-2 text-[#077770] font-bold text-[11px] uppercase tracking-wider mb-4">
+                                    <Activity size={14}/> Provider Logs
+                                </h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Provider Purchase ID</p>
+                                        <p className="bg-white border border-slate-200 p-2.5 rounded-lg text-sm font-mono text-slate-700 truncate">{selectedOrderDetails.provider_purchase_id || "N/A"}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Provider Ref</p>
+                                        <p className="bg-white border border-slate-200 p-2.5 rounded-lg text-sm font-mono text-slate-700 truncate">{selectedOrderDetails.provider_reference || "N/A"}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Status Code/Msg</p>
+                                        <p className="bg-white border border-slate-200 p-2.5 rounded-lg text-sm font-mono text-slate-700 truncate">{selectedOrderDetails.provider_status_msg || "N/A"}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Txn Time</p>
+                                        <p className="bg-white border border-slate-200 p-2.5 rounded-lg text-sm font-mono text-slate-700 truncate">N/A</p> {/* If you have a specific txn time field, put it here */}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* SECTION: STATUS & GATEWAY RECORDS */}
+                            <div>
+                                <h3 className="flex items-center gap-2 text-[#9333ea] font-bold text-sm uppercase tracking-wider mb-4 border-b-2 border-[#9333ea]/20 pb-2">
+                                    <CreditCard size={16}/> Status & Gateway Records
+                                </h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    
+                                    {/* Left: Statuses */}
+                                    <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Order Status</span>
+                                            <StatusPill value={selectedOrderDetails.order_status} />
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Payment Status</span>
+                                            <StatusPill value={selectedOrderDetails.payment_status} />
+                                        </div>
+                                        <div className="flex justify-between items-center pb-4 border-b border-slate-100">
+                                            <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Provisioning Status</span>
+                                            <StatusPill value={selectedOrderDetails.provisioning_status} />
+                                        </div>
+                                        <div className="flex justify-between items-center pt-2">
+                                            <span className="text-sm font-extrabold text-slate-800">Total Charged</span>
+                                            <span className="font-extrabold text-emerald-700 bg-emerald-100 px-3 py-1 rounded text-lg">
+                                                {selectedOrderDetails.payment_currency} {selectedOrderDetails.payment_amount}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* Right: Gateway */}
+                                    <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4">
+                                        <div>
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Stripe Payment Intent ID</p>
+                                            <p className="bg-slate-50 border border-slate-100 p-2.5 rounded-lg text-sm font-mono text-slate-700 truncate">{selectedOrderDetails.stripe_payment_intent_id || "N/A"}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Stripe Session ID</p>
+                                            <p className="bg-slate-50 border border-slate-100 p-2.5 rounded-lg text-sm font-mono text-slate-700 truncate">{selectedOrderDetails.stripe_sessionId || "N/A"}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* SECTION: CUSTOMER INFORMATION */}
+                            <div>
+                                <h3 className="flex items-center gap-2 text-slate-700 font-bold text-sm uppercase tracking-wider mb-4 border-b-2 border-slate-200 pb-2">
+                                    <Users size={16}/> Customer Information
+                                </h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex items-center gap-4">
+                                        <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
+                                            <Users size={20} className="text-slate-400"/>
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Email Address</p>
+                                            <p className="font-bold text-slate-800">{selectedOrderDetails.customer_email}</p>
+                                        </div>
+                                    </div>
+                                    <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex items-center gap-4">
+                                        <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
+                                            <FileText size={20} className="text-slate-400"/>
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Terms Agreed?</p>
+                                            <p className="font-bold text-emerald-600">{selectedOrderDetails.terms_agreed ? "Yes" : "No"}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ======================================================== */}
+            {/* MANUAL PROVISIONING EDIT MODAL */}
+            {/* ======================================================== */}
             {editingOrder && (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[70] p-4 animate-in fade-in duration-200">
                     <div className="bg-white rounded-3xl w-full max-w-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
                         
                         <div className="p-6 bg-slate-50 border-b border-slate-100 flex justify-between items-center shrink-0">
@@ -562,10 +694,9 @@ export default function AdminPartnerCustomerSearch() {
 
                         <div className="p-6 overflow-y-auto custom-scrollbar flex-1">
                             <form id="manual-provision-form" onSubmit={handleUpdateFailedOrder} className="space-y-5">
-                                
                                 <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
                                     <AlertCircle size={18} className="text-amber-600 shrink-0 mt-0.5"/>
-                                    <p className="text-sm text-amber-800">You are manually updating a failed order. This will override the current provisioning details and mark the order as successfully provisioned.</p>
+                                    <p className="text-sm text-amber-800">You are manually updating an order. This will override the current provisioning details and mark the order as successfully provisioned.</p>
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -592,7 +723,6 @@ export default function AdminPartnerCustomerSearch() {
                                         <label className="block text-sm font-bold text-slate-700 mb-1.5">Provider Reference <span className="text-red-500">*</span></label>
                                         <input required type="text" value={editFormData.provider_reference} onChange={e => setEditFormData({...editFormData, provider_reference: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#ec5b13] focus:ring-2 focus:ring-[#ec5b13]/20 font-mono text-sm" />
                                     </div>
-
                                     <div>
                                         <label className="block text-sm font-bold text-slate-700 mb-1.5">Provider Cost <span className="text-red-500">*</span></label>
                                         <input required type="number" step="0.01" value={editFormData.provider_amount} onChange={e => setEditFormData({...editFormData, provider_amount: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#ec5b13] focus:ring-2 focus:ring-[#ec5b13]/20" placeholder="0.00" />
@@ -601,7 +731,6 @@ export default function AdminPartnerCustomerSearch() {
                                         <label className="block text-sm font-bold text-slate-700 mb-1.5">Provider Currency <span className="text-red-500">*</span></label>
                                         <input required type="text" value={editFormData.provider_currency} onChange={e => setEditFormData({...editFormData, provider_currency: e.target.value.toUpperCase()})} maxLength="3" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#ec5b13] focus:ring-2 focus:ring-[#ec5b13]/20 font-bold uppercase" />
                                     </div>
-
                                     <div className="md:col-span-2">
                                         <label className="block text-sm font-bold text-slate-700 mb-1.5">Admin Notes (Internal)</label>
                                         <textarea value={editFormData.notes} onChange={e => setEditFormData({...editFormData, notes: e.target.value})} rows="2" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#ec5b13] focus:ring-2 focus:ring-[#ec5b13]/20 resize-none text-sm" placeholder="e.g., Manually purchased via portal because API failed."></textarea>
