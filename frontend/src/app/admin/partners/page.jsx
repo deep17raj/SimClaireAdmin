@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Plus, Edit, CheckCircle, XCircle, Clock, Users, FileText } from "lucide-react";
+import { Plus, Edit, CheckCircle, XCircle, Clock, Users, FileText,Download } from "lucide-react";
 import axios from "axios";
 
 export default function AdminPartnersPage() {
@@ -15,8 +15,65 @@ export default function AdminPartnersPage() {
 
   // Safely get token to prevent Next.js SSR crashes
   const adminToken = typeof window !== "undefined" ? localStorage.getItem("adminToken") : null;
-
+// 🌟 Global Partner Export States
+const [isExportingAll, setIsExportingAll] = useState(false);
+const [exportAllFromDate, setExportAllFromDate] = useState("");
+const [exportAllToDate, setExportAllToDate] = useState("");
   // 1. Fetch Partners
+  // --- Export ALL Partner Sales Handler ---
+const handleExportAllPartnerSalesCSV = async () => {
+    setIsExportingAll(true);
+    try {
+        const adminToken = localStorage.getItem("adminToken");
+        if (!adminToken) {
+            router.push("/admin/login");
+            return;
+        }
+
+        // Build query params dynamically based on date selections
+        const queryParams = {};
+        if (exportAllFromDate) queryParams.from_date = exportAllFromDate;
+        if (exportAllToDate) queryParams.to_date = exportAllToDate;
+
+        // Fetch the blob response from the global export API
+        const response = await axios.get(
+            `${process.env.NEXT_PUBLIC_API_URL}/admin/reports/partner-sales/export`, 
+            {
+                headers: { Authorization: `Bearer ${adminToken}` },
+                params: queryParams,
+                responseType: 'blob', // IMPORTANT: Required for handling file downloads
+            }
+        );
+
+        // Extract the filename from headers or generate a fallback
+        let fileName = `admin-partner-sales-export-${new Date().toISOString().split('T')[0]}.csv`;
+        const contentDisposition = response.headers['content-disposition'];
+        if (contentDisposition && contentDisposition.includes('filename=')) {
+            const matches = /filename="([^"]+)"/.exec(contentDisposition);
+            if (matches != null && matches[1]) {
+                fileName = matches[1];
+            }
+        }
+
+        // Create a temporary link to download the file
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', fileName);
+        document.body.appendChild(link);
+        link.click();
+        
+        // Clean up
+        link.parentNode.removeChild(link);
+        window.URL.revokeObjectURL(url);
+
+    } catch (err) {
+        console.error("Global Export failed:", err);
+        alert("Failed to export all partner sales CSV. Please try again.");
+    } finally {
+        setIsExportingAll(false);
+    }
+};
   const fetchPartners = async () => {
     try {
       const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/admin/partners`, {
@@ -101,7 +158,44 @@ export default function AdminPartnersPage() {
           <Plus size={18} /> Add New Partner
         </button>
       </div>
+      {/* --- GLOBAL EXPORT CSV CONTROLS --- */}
+<div className="flex flex-col sm:flex-row items-center gap-3 py-4 my-4 bg-white p-2 rounded-xl border border-slate-200 shadow-sm w-full lg:w-130 h-max shrink-0">
+    <div className="flex items-center gap-2 px-2">
+        <div className="flex flex-col">
+            <span className="text-[10px] font-bold text-slate-400 uppercase ml-1">From</span>
+            <input 
+                type="date" 
+                value={exportAllFromDate}
+                onChange={(e) => setExportAllFromDate(e.target.value)}
+                className="text-sm text-slate-700 bg-transparent outline-none font-medium cursor-pointer"
+            />
+        </div>
+        <span className="text-slate-300">-</span>
+        <div className="flex flex-col">
+            <span className="text-[10px] font-bold text-slate-400 uppercase ml-1">To</span>
+            <input 
+                type="date" 
+                value={exportAllToDate}
+                onChange={(e) => setExportAllToDate(e.target.value)}
+                min={exportAllFromDate} 
+                className="text-sm text-slate-700 bg-transparent outline-none font-medium cursor-pointer"
+            />
+        </div>
+    </div>
 
+    <button 
+        onClick={handleExportAllPartnerSalesCSV}
+        disabled={isExportingAll}
+        className="flex items-center justify-center gap-2 px-5 py-2.5 bg-[#077770] text-white rounded-lg font-bold text-sm transition-all hover:bg-[#065f59] disabled:opacity-50 shadow-sm w-full sm:w-auto"
+    >
+        {isExportingAll ? (
+            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+        ) : (
+            <Download size={16} />
+        )}
+        {isExportingAll ? "Exporting..." : "Export All Sales"}
+    </button>
+</div>
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[900px]">
